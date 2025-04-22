@@ -12,10 +12,10 @@ exports.getAllCards = async (req, res, next) => {
     const { deck, type, suit } = req.query;
     const filter = {};
     
-    // Áp dụng các bộ lọc từ query parameters
-    if (deck) filter.deck = deck;
-    if (type) filter.type = type;
-    if (suit) filter.suit = suit;
+    // Áp dụng các bộ lọc từ query parameters (case-insensitive)
+    if (deck) filter.deck = { $regex: new RegExp(`^${deck}$`, 'i') };
+    if (type) filter.type = { $regex: new RegExp(`^${type}$`, 'i') };
+    if (suit) filter.suit = { $regex: new RegExp(`^${suit}$`, 'i') };
     
     const cards = await Card.find(filter);
     
@@ -58,7 +58,8 @@ exports.getCard = async (req, res, next) => {
 exports.getCardsByDeck = async (req, res, next) => {
   try {
     const { deckName } = req.params;
-    const cards = await Card.find({ deck: deckName });
+    // Use case-insensitive regex
+    const cards = await Card.find({ deck: { $regex: new RegExp(`^${deckName}$`, 'i') } });
     
     res.status(200).json(ApiResponse.success(
       cards,
@@ -77,7 +78,8 @@ exports.getCardsByDeck = async (req, res, next) => {
 exports.getCardsByType = async (req, res, next) => {
   try {
     const { cardType } = req.params;
-    const cards = await Card.find({ type: cardType });
+    // Use case-insensitive regex
+    const cards = await Card.find({ type: { $regex: new RegExp(`^${cardType}$`, 'i') } });
     
     res.status(200).json(ApiResponse.success(
       cards,

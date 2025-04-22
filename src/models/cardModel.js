@@ -21,16 +21,17 @@ const CardSchema = new mongoose.Schema(
       type: String,
       enum: ['Major Arcana', 'Minor Arcana'],
       required: [true, 'Loại bài là bắt buộc']
-    },
-    suit: {
-      type: String,
-      // Chỉ bắt buộc cho Minor Arcana
-      validate: {
-        validator: function(val) {
-          // Nếu là Minor Arcana thì bắt buộc phải có suit
-          return this.type !== 'Minor Arcana' || (val && val.length > 0);
-        },
-        message: 'Suit là bắt buộc cho Minor Arcana'
+     },
+     suit: {
+       type: String,
+       enum: ['Gậy', 'Cốc', 'Kiếm', 'Tiền', null], // Allow null for Major Arcana
+       // Chỉ bắt buộc cho Minor Arcana
+       validate: {
+         validator: function(val) {
+           // Nếu là Minor Arcana thì bắt buộc phải có suit (không null)
+           return this.type !== 'Minor Arcana' || val !== null;
+         },
+         message: 'Suit là bắt buộc và phải là một trong các giá trị hợp lệ cho Minor Arcana'
       }
     },
     number: {

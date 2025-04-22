@@ -31,13 +31,24 @@ exports.createReading = async (req, res, next) => {
       userId: req.user._id,
       spread,
       question,
+      userId: req.user._id,
+      spread,
+      question,
       cards,
     });
 
-    // Populate thông tin chi tiết của lá bài
-    const populatedReading = await Reading.findById(newReading._id);
+    // Populate thông tin chi tiết của lá bài trực tiếp
+    await newReading.populate({
+      path: 'cards.cardId',
+      select: 'name imageUrl uprightMeaning reversedMeaning'
+    });
+    await newReading.populate({
+      path: 'userId',
+      select: 'name email'
+    });
 
-    res.status(201).json(ApiResponse.success(populatedReading, 'Tạo phiên đọc bài thành công', 201));
+
+    res.status(201).json(ApiResponse.success(newReading, 'Tạo phiên đọc bài thành công', 201));
   } catch (error) {
     next(error);
   }

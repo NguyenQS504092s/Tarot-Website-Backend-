@@ -8,12 +8,18 @@ const HoroscopeSchema = new mongoose.Schema(
     sign: {
       type: String,
       required: [true, 'Cung hoàng đạo là bắt buộc'],
-      trim: true
+      trim: true,
+      // Use the same enum as in userModel for consistency
+      enum: [
+        'Bạch Dương', 'Kim Ngưu', 'Song Tử', 'Cự Giải', 
+        'Sư Tử', 'Xử Nữ', 'Thiên Bình', 'Bọ Cạp', 
+        'Nhân Mã', 'Ma Kết', 'Bảo Bình', 'Song Ngư'
+      ]
     },
     date: {
       type: Date,
-      required: [true, 'Ngày là bắt buộc'],
-      default: Date.now
+      required: [true, 'Ngày là bắt buộc']
+      // Default removed, will be handled by pre-save hook
     },
     general: {
       type: String,
@@ -64,19 +70,30 @@ const HoroscopeSchema = new mongoose.Schema(
   }
 );
 
+// Pre-save hook to normalize the date to the start of the day
+HoroscopeSchema.pre('save', function(next) {
+  if (this.date) {
+    this.date.setHours(0, 0, 0, 0);
+  } else {
+    // If date is not provided, set it to the start of today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    this.date = today;
+  }
+  next();
+});
+
+
 // Thêm method để tìm tử vi cho một cung hoàng đạo trong một ngày cụ thể
 HoroscopeSchema.statics.findDailyHoroscope = async function(sign, date = new Date()) {
-  // Định dạng ngày cho đúng (loại bỏ phần thời gian, chỉ giữ ngày)
-  const formattedDate = new Date(date);
-  formattedDate.setHours(0, 0, 0, 0);
-  
-  // Tìm tử vi cho cung hoàng đạo trong ngày
+  // Định dạng ngày cho đúng (loại bỏ phần thời gian, chỉ giữ ngày) - Date is already normalized in DB
+  const targetDate = new Date(date);
+  targetDate.setHours(0, 0, 0, 0); // Normalize the query date as well
+
+  // Tìm tử vi cho cung hoàng đạo trong ngày (date field is already normalized)
   return this.findOne({
     sign: sign,
-    date: {
-      $gte: formattedDate,
-      $lt: new Date(formattedDate.getTime() + 24 * 60 * 60 * 1000)
-    },
+    date: targetDate, // Exact match on the normalized date
     isActive: true
   });
 };

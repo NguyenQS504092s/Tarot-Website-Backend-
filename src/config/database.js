@@ -13,10 +13,8 @@ const connectDB = async () => {
       process.exit(1);
     }
 
-    const conn = await mongoose.connect(config.mongoUri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    // Mongoose 6+ defaults useNewUrlParser and useUnifiedTopology to true
+    const conn = await mongoose.connect(config.mongoUri);
 
     logger.info(`MongoDB đã kết nối: ${conn.connection.host}`);
     return conn;
@@ -35,8 +33,8 @@ const closeDB = async () => {
     await mongoose.connection.close();
     logger.info('Đã đóng kết nối MongoDB');
   } catch (error) {
+    // Log the error but don't necessarily exit the process during shutdown
     logger.error(`Lỗi khi đóng kết nối MongoDB: ${error.message}`);
-    process.exit(1);
   }
 };
 

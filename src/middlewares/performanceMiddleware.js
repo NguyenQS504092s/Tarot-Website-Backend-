@@ -1,4 +1,5 @@
 const logger = require('../utils/logger');
+const config = require('../config/config');
 
 /**
  * Middleware theo dõi thời gian xử lý request
@@ -14,9 +15,9 @@ const trackPerformance = (name) => {
       // Tính thời gian đã trôi qua
       const elapsedMs = Date.now() - start;
       
-      // Ghi log nếu thời gian xử lý vượt quá 1 giây
-      if (elapsedMs > 1000) {
-        logger.warn(`[HIỆU SUẤT CHẬM] ${name} - ${req.method} ${req.originalUrl} - ${elapsedMs}ms`);
+      // Ghi log nếu thời gian xử lý vượt quá ngưỡng cấu hình
+      if (elapsedMs > config.performanceThresholdMs) {
+        logger.warn(`[HIỆU SUẤT CHẬM] ${name} - ${req.method} ${req.originalUrl} - ${elapsedMs}ms (Ngưỡng: ${config.performanceThresholdMs}ms)`);
       } else {
         logger.debug(`[HIỆU SUẤT] ${name} - ${req.method} ${req.originalUrl} - ${elapsedMs}ms`);
       }

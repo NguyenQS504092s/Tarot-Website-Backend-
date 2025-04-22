@@ -16,8 +16,9 @@ const handleValidationErrorDB = err => {
   return new ApiError(message, 400);
 };
 
-const handleJWTError = () => new ApiError('Token không hợp lệ. Vui lòng đăng nhập lại.', 401);
-const handleJWTExpiredError = () => new ApiError('Token đã hết hạn. Vui lòng đăng nhập lại.', 401);
+// JWT errors are handled in authMiddleware and converted to ApiError (operational)
+// const handleJWTError = () => new ApiError('Token không hợp lệ. Vui lòng đăng nhập lại.', 401);
+// const handleJWTExpiredError = () => new ApiError('Token đã hết hạn. Vui lòng đăng nhập lại.', 401);
 
 
 const errorMiddleware = (err, req, res, next) => {
@@ -46,11 +47,10 @@ const errorMiddleware = (err, req, res, next) => {
     } 
     // Lỗi lập trình hoặc lỗi không xác định: Xử lý các lỗi cụ thể trước
     else {
-      // Handle specific errors first
+      // Handle specific Mongoose errors first
       if (error.name === 'CastError') error = handleCastErrorDB(error);
       if (error.name === 'ValidationError') error = handleValidationErrorDB(error);
-      if (error.name === 'JsonWebTokenError') error = handleJWTError();
-      if (error.name === 'TokenExpiredError') error = handleJWTExpiredError();
+      // JWT errors are already converted to operational ApiErrors by authMiddleware
 
       // Log the original error for internal debugging, regardless of type
       logger.error('ERROR 💥', err); // Log the original error stack

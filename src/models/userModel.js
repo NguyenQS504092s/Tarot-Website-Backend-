@@ -86,51 +86,31 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Method: Tạo JWT token - Phương thức cũ
-userSchema.methods.generateAuthToken = function() {
-  if (!process.env.JWT_SECRET) {
-    throw new Error('JWT_SECRET không được định nghĩa trong biến môi trường');
-  }
-  return jwt.sign(
-    { id: this._id, role: this.role },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-  );
-};
-
 // Method: Tạo JWT token (để tương thích với userController)
 userSchema.methods.getSignedJwtToken = function() {
-  if (!process.env.JWT_SECRET) {
-    throw new Error('JWT_SECRET không được định nghĩa trong biến môi trường');
+  if (!config.jwtSecret) {
+    // Rely on server startup check, but log error if somehow missed
+    logger.error('JWT_SECRET không được định nghĩa!'); 
+    throw new Error('Lỗi cấu hình server: JWT Secret bị thiếu.');
   }
   return jwt.sign(
     { id: this._id, role: this.role },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-  );
-};
-
-// Method: Tạo refresh token
-userSchema.methods.generateRefreshToken = function() {
-  if (!process.env.JWT_SECRET) {
-    throw new Error('JWT_SECRET không được định nghĩa trong biến môi trường');
-  }
-  return jwt.sign(
-    { id: this._id },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' }
+    config.jwtSecret, // Use config
+    { expiresIn: config.jwtExpiresIn } // Use config
   );
 };
 
 // Method: Tạo refresh token (để tương thích với userController)
 userSchema.methods.getRefreshToken = function() {
-  if (!process.env.JWT_SECRET) {
-    throw new Error('JWT_SECRET không được định nghĩa trong biến môi trường');
+  if (!config.jwtSecret) {
+    // Rely on server startup check, but log error if somehow missed
+    logger.error('JWT_SECRET không được định nghĩa!');
+    throw new Error('Lỗi cấu hình server: JWT Secret bị thiếu.');
   }
   return jwt.sign(
     { id: this._id },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' }
+    config.jwtSecret, // Use config
+    { expiresIn: config.jwtRefreshExpiresIn } // Use config
   );
 };
 
@@ -145,22 +125,21 @@ userSchema.methods.checkAndResetDailyReadings = function() {
     now.getMonth() !== lastReset.getMonth() ||
     now.getFullYear() !== lastReset.getFullYear()
   ) {
-    // Reset lại số lần đọc bài hàng ngày
+    // Reset lại số lần đọc bài hàng ngày (không lưu ở đây)
     this.dailyReadings.count = 0;
     this.dailyReadings.lastReset = now;
-    this.save();
-    return true;
+    // Caller is responsible for saving the document
   }
   
-  // Kiểm tra xem còn lượt đọc bài miễn phí không
-  const maxFreeReadings = process.env.FREE_READINGS_PER_DAY || config.freeReadingsPerDay || 3;
-  return this.dailyReadings.count < maxFreeReadings;
+  // Kiểm tra xem còn lượt đọc bài miễn phí không (sau khi đã reset nếu cần)
+  // Sử dụng giá trị từ config
+  return this.dailyReadings.count < config.freeReadingsPerDay;
 };
 
-// Method: Tăng số lần đọc bài trong ngày
+// Method: Tăng số lần đọc bài trong ngày (không lưu)
 userSchema.methods.incrementDailyReadings = function() {
   this.dailyReadings.count += 1;
-  return this.save();
+  // Caller is responsible for saving the document
 };
 
 const User = mongoose.model('User', userSchema);

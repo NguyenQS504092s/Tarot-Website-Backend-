@@ -9,7 +9,13 @@ const ZodiacSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Tên cung hoàng đạo là bắt buộc'],
       unique: true,
-      trim: true
+      trim: true,
+      // Use the standard enum for consistency
+      enum: [
+        'Bạch Dương', 'Kim Ngưu', 'Song Tử', 'Cự Giải', 
+        'Sư Tử', 'Xử Nữ', 'Thiên Bình', 'Bọ Cạp', 
+        'Nhân Mã', 'Ma Kết', 'Bảo Bình', 'Song Ngư'
+      ]
     },
     nameEn: {
       type: String,
@@ -45,13 +51,19 @@ const ZodiacSchema = new mongoose.Schema(
     weaknesses: [{
       type: String,
       trim: true
-    }],
-    compatibility: [{
-      sign: {
-        type: String,
-        trim: true
-      },
-      score: {
+     }],
+     compatibility: [{
+       sign: {
+         type: String,
+         trim: true,
+         // Use the standard enum here as well
+         enum: [
+           'Bạch Dương', 'Kim Ngưu', 'Song Tử', 'Cự Giải', 
+           'Sư Tử', 'Xử Nữ', 'Thiên Bình', 'Bọ Cạp', 
+           'Nhân Mã', 'Ma Kết', 'Bảo Bình', 'Song Ngư'
+         ]
+       },
+       score: {
         type: Number,
         min: 1,
         max: 100
@@ -67,8 +79,12 @@ const ZodiacSchema = new mongoose.Schema(
     }]
   },
   {
-    timestamps: true
-  }
-);
-
-module.exports = mongoose.model('Zodiac', ZodiacSchema);
+     timestamps: true
+   }
+ );
+ 
+ // Add indexes for common lookups
+ ZodiacSchema.index({ name: 1 });
+ ZodiacSchema.index({ nameEn: 1 });
+ 
+ module.exports = mongoose.model('Zodiac', ZodiacSchema);

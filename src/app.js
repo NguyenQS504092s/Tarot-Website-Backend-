@@ -4,6 +4,8 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const dotenv = require('dotenv');
 const logger = require('./utils/logger');
+const config = require('./config/config'); // Import config
+const ApiError = require('./utils/apiError'); // Import ApiError
 
 // Load environment variables
 dotenv.config();
@@ -27,7 +29,7 @@ app.use(helmet());
 
 // CORS configuration
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN || '*',
+  origin: config.corsOrigin, // Use config value
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   preflightContinue: false,
   optionsSuccessStatus: 204,
@@ -37,9 +39,11 @@ app.use(cors(corsOptions));
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: process.env.RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000, // 15 minutes
-  max: process.env.RATE_LIMIT_MAX || 100, // limit each IP to 100 requests per windowMs
-  message: 'Quá nhiều yêu cầu từ IP của bạn, vui lòng thử lại sau 15 phút'
+  windowMs: config.rateLimitWindowMs, // Use config value
+  max: config.rateLimitMax, // Use config value
+  message: 'Quá nhiều yêu cầu từ IP của bạn, vui lòng thử lại sau 15 phút',
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
 
 // Apply rate limiting to all API routes
@@ -75,11 +79,8 @@ app.get('/health', (req, res) => {
 
 // Handle 404 - Route not found
 app.use((req, res, next) => {
-  res.status(404).json({
-    success: false,
-    message: 'Không tìm thấy đường dẫn yêu cầu',
-    code: 404
-  });
+  // Pass error to the centralized error handler
+  next(new ApiError(`Không tìm thấy đường dẫn: ${req.originalUrl}`, 404));
 });
 
 // Error handler middleware should be last

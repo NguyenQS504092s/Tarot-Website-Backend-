@@ -67,13 +67,6 @@ const ReadingSchema = new mongoose.Schema(
 ReadingSchema.index({ userId: 1, createdAt: -1 });
 ReadingSchema.index({ readerId: 1, createdAt: -1 });
 
-// Virtual populate để lấy thông tin chi tiết về lá bài
-ReadingSchema.virtual('cardsDetail', {
-  ref: 'Card',
-  localField: 'cards.cardId',
-  foreignField: '_id'
-});
-
 // Virtual populate để lấy thông tin người dùng
 ReadingSchema.virtual('userDetail', {
   ref: 'User',
@@ -97,14 +90,14 @@ ReadingSchema.pre(/^find/, function(next) {
     select: 'name imageUrl uprightMeaning reversedMeaning'
   });
   
-  // Thêm populate cho userDetail và readerDetail nhưng chỉ lấy thông tin cơ bản
+  // Thêm populate cho userId và readerId nhưng chỉ lấy thông tin cơ bản (loại bỏ avatar vì chưa có trong User model)
   this.populate({
     path: 'userId',
-    select: 'name email avatar'
+    select: 'name email' // Removed avatar
   })
   .populate({
     path: 'readerId',
-    select: 'name email avatar'
+    select: 'name email' // Removed avatar
   });
   
   next();

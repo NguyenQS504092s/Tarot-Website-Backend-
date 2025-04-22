@@ -25,7 +25,8 @@ function shuffleArray(array) {
  */
 exports.getCardsByDeck = async (deckName) => {
   try {
-    const cards = await Card.find({ deck: deckName });
+    // Use case-insensitive regex
+    const cards = await Card.find({ deck: { $regex: new RegExp(`^${deckName}$`, 'i') } });
     
     if (cards.length === 0) {
       throw new ApiError(`Không tìm thấy lá bài nào thuộc bộ ${deckName}`, 404);
@@ -54,7 +55,7 @@ exports.shuffleCards = (cards) => {
  * @param {String} deckName Tên bộ bài
  * @param {Number} count Số lượng lá cần rút
  * @param {Boolean} allowReversed Cho phép lá bài ngược
- * @returns {Promise<Array>} Các lá bài đã rút
+ * @returns {Promise<Array>} Mảng các đối tượng lá bài đã rút (bao gồm cả thông tin lá bài và trạng thái xuôi/ngược)
  */
 exports.drawCards = async (deckName, count, allowReversed = true) => {
   try {
@@ -70,9 +71,9 @@ exports.drawCards = async (deckName, count, allowReversed = true) => {
     // Rút ngẫu nhiên số lá bài cần thiết
     const drawnCards = shuffledCards.slice(0, count);
     
-    // Xác định ngẫu nhiên lá bài xuôi hay ngược
+    // Xác định ngẫu nhiên lá bài xuôi hay ngược và trả về đối tượng đầy đủ
     return drawnCards.map(card => ({
-      cardId: card._id,
+      card: card.toObject(), // Trả về object đầy đủ của lá bài
       isReversed: allowReversed ? Math.random() < 0.5 : false
     }));
   } catch (error) {
@@ -92,20 +93,9 @@ exports.drawCards = async (deckName, count, allowReversed = true) => {
  */
 exports.getRandomCards = async (count, deckName = 'Rider Waite Smith', allowReversed = true) => {
   try {
-    const drawnCards = await this.drawCards(deckName, count, allowReversed);
-    
-    // Thêm thông tin chi tiết của lá bài
-    const cardsWithDetails = await Promise.all(
-      drawnCards.map(async (card) => {
-        const cardDetails = await Card.findById(card.cardId);
-        return {
-          ...card,
-          details: cardDetails
-        };
-      })
-    );
-    
-    return cardsWithDetails;
+    // drawCards giờ đã trả về thông tin chi tiết
+    const drawnCardsWithDetails = await this.drawCards(deckName, count, allowReversed);
+    return drawnCardsWithDetails;
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;
@@ -143,9 +133,10 @@ exports.drawCardsForSpread = async (spreadName, deckName = 'Rider Waite Smith', 
     // Rút các lá bài
     const drawnCards = await this.drawCards(deckName, cardCount, allowReversed);
     
-    // Gán vị trí cho từng lá bài
-    return drawnCards.map((card, index) => ({
-      ...card,
+    // Gán vị trí cho từng lá bài (drawnCards giờ chứa { card: object, isReversed: boolean })
+    return drawnCards.map((drawnCard, index) => ({
+      cardId: drawnCard.card._id, // Lấy ID từ object card
+      isReversed: drawnCard.isReversed,
       position: index + 1
     }));
   } catch (error) {

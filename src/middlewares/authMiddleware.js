@@ -48,7 +48,9 @@ exports.protect = async (req, res, next) => {
     } else if (error.name === 'TokenExpiredError') {
       return next(new ApiError('Token đã hết hạn, vui lòng đăng nhập lại', 401));
     }
-    return next(new ApiError('Lỗi xác thực: ' + error.message, 401));
+    // Log unexpected errors and return a generic server error
+    logger.error(`Lỗi xác thực không mong muốn: ${error.message}`, error);
+    return next(new ApiError('Lỗi server trong quá trình xác thực', 500));
   }
 };
 

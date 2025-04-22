@@ -8,7 +8,11 @@ const MessageSchema = new mongoose.Schema(
     sender: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true
+      // Sender is not required for system messages
+      required: [
+        function() { return this.contentType !== 'system'; },
+        'Sender is required for non-system messages'
+      ]
     },
     content: {
       type: String,
@@ -85,9 +89,9 @@ ChatSchema.pre('save', function(next) {
 ChatSchema.pre(/^find/, function(next) {
   this.populate({
     path: 'participants',
-    select: 'name email avatar role'
+    select: 'name email role' // Removed avatar
   });
-  
+
   // Thêm populate cho relatedReading
   this.populate({
     path: 'relatedReading',
@@ -106,12 +110,14 @@ ChatSchema.methods.addMessage = async function(sender, content, contentType = 't
     attachments
   });
   this.lastMessage = Date.now();
-  return this.save();
+  // Caller is responsible for saving
+  // return this.save(); 
 };
 
 // Tạo tin nhắn hệ thống
 ChatSchema.methods.addSystemMessage = async function(content) {
-  return this.addMessage(this.participants[0], content, 'system');
+  // Pass null for sender in system messages
+  return this.addMessage(null, content, 'system'); 
 };
 
 // Đánh dấu tất cả tin nhắn là đã đọc
@@ -123,10 +129,11 @@ ChatSchema.methods.markAllAsRead = async function(userId) {
 
   for (let message of messages) {
     message.isRead = true;
-    message.readAt = new Date();
+    // message.readAt = new Date(); // Field doesn't exist in schema
   }
 
-  await this.save();
+  // Caller is responsible for saving
+  // await this.save(); 
 };
 
 // Static để tìm tất cả cuộc trò chuyện của một người dùng
@@ -135,7 +142,7 @@ ChatSchema.statics.findChatsForUser = async function(userId) {
     participants: userId,
     isActive: true
   })
-    .populate('participants', 'name avatar email role')
+    .populate('participants', 'name email role') // Removed avatar
     .populate('relatedReading', 'spread question createdAt')
     .sort({ lastMessage: -1 });
 };

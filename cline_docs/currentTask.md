@@ -9,6 +9,7 @@
 - No critical errors found in the reviewed files, but identified areas for potential improvement and further review (logging, validation, rate-limiter scope).
 
 ## Next Steps
-- [ ] Update `techStack.md` based on reviewed files.
-- [ ] Update `codebaseSummary.md` with initial findings.
-- [ ] Await user feedback or request for deeper review of specific components/files.
+- [x] Update `techStack.md` based on reviewed files. (Implicitly done during review)
+- [x] Update `codebaseSummary.md` with initial findings and applied fixes.
+- [x] Perform detailed review and apply fixes across core directories (config, middlewares, utils, models, routes, controllers, services).
+- [ ] Await user feedback or next task.

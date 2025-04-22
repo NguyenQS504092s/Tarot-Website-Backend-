@@ -69,14 +69,20 @@ async function startServer() {
     
     // Handle SIGTERM
     process.on('SIGTERM', () => {
-      logger.info('NHẬN ĐƯỢC SIGTERM. Đang tắt ứng dụng...');
-      server.close(() => {
-        closeDB().then(() => {
-          logger.info('Quá trình đã kết thúc!');
-          process.exit(0);
-        });
-      });
-    });
+     logger.info('NHẬN ĐƯỢC SIGTERM. Đang tắt ứng dụng...');
+     server.close(() => {
+       logger.info('HTTP server đã đóng.');
+       closeDB()
+         .catch(err => {
+           // Log error during DB closing but proceed with shutdown
+           logger.error('Lỗi khi đóng kết nối DB trong quá trình tắt:', err);
+         })
+         .finally(() => {
+           logger.info('Quá trình đã kết thúc!');
+           process.exit(0);
+         });
+     });
+   });
   } catch (error) {
     logger.error(`Lỗi khởi động server: ${error.message}`);
     process.exit(1);

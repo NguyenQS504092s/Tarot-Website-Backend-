@@ -43,10 +43,10 @@ exports.getPlanById = async (req, res, next) => {
 
 /**
  * @desc    Tạo mới gói dịch vụ
- * @route   POST /api/payments/plans
+ * @route   POST /api/payments/admin/plans
  * @access  Private (Admin)
  */
-exports.createPlan = async (req, res, next) => {
+exports.createSubscriptionPlan = async (req, res, next) => { // Renamed
   try {
     const { name, description, price, currency, duration, durationUnit, features } = req.body;
 
@@ -92,10 +92,10 @@ exports.createPlan = async (req, res, next) => {
 
 /**
  * @desc    Cập nhật gói dịch vụ
- * @route   PUT /api/payments/plans/:id
+ * @route   PUT /api/payments/admin/plans/:id
  * @access  Private (Admin)
  */
-exports.updatePlan = async (req, res, next) => {
+exports.updateSubscriptionPlan = async (req, res, next) => { // Renamed
   try {
     const { name, description, price, isActive, features } = req.body;
 
@@ -506,6 +506,65 @@ exports.getPaymentHistory = async (req, res, next) => {
       count: payments.length,
       payments
     }, 'Lấy lịch sử thanh toán thành công'));
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Xóa (hủy kích hoạt) gói dịch vụ
+ * @route   DELETE /api/payments/admin/plans/:id
+ * @access  Private (Admin)
+ */
+exports.deleteSubscriptionPlan = async (req, res, next) => {
+  try {
+    const plan = await SubscriptionPlan.findById(req.params.id);
+
+    if (!plan) {
+      return next(new ApiError('Không tìm thấy gói dịch vụ', 404));
+    }
+
+    // Deactivate the plan instead of deleting, safer approach
+    plan.isActive = false;
+
+    // Optionally deactivate Stripe product (requires careful consideration of active subscriptions)
+    // await stripe.products.update(plan.stripeProductId, { active: false });
+
+    await plan.save();
+
+    res.status(200).json(ApiResponse.success(null, 'Gói dịch vụ đã được hủy kích hoạt'));
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Lấy tất cả lịch sử thanh toán (Admin)
+ * @route   GET /api/payments/admin/payments
+ * @access  Private (Admin)
+ */
+exports.getAllPayments = async (req, res, next) => {
+  try {
+    // Basic Pagination (can be enhanced)
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 20;
+    const skip = (page - 1) * limit;
+
+    const totalPayments = await Payment.countDocuments();
+    const payments = await Payment.find()
+      .populate('userId', 'name email')
+      .populate('subscriptionPlan', 'name')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.status(200).json(ApiResponse.pagination(
+      payments,
+      page,
+      limit,
+      totalPayments,
+      'Lấy tất cả lịch sử thanh toán thành công'
+    ));
   } catch (error) {
     next(error);
   }

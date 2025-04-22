@@ -197,7 +197,8 @@ UserSubscriptionSchema.pre('save', async function(next) {
   // Nếu đây là một subscription mới và endDate chưa được set
   if (this.isNew && !this.endDate) {
     try {
-      const plan = await mongoose.model('SubscriptionPlan').findById(this.plan);
+      // Use the model directly since it's defined in the same file
+      const plan = await SubscriptionPlan.findById(this.plan); 
       if (!plan) {
         return next(new Error('Không tìm thấy gói dịch vụ'));
       }

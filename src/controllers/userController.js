@@ -190,8 +190,8 @@ exports.forgotPassword = async (req, res, next) => {
     await user.save({ validateBeforeSave: false });
 
     res.status(200).json(ApiResponse.success(
-      { resetToken }, // Trong thực tế không nên trả về token này
-      'Token đặt lại mật khẩu đã được gửi đến email'
+      null, // Do NOT return the reset token in the response
+      'Token đặt lại mật khẩu đã được gửi đến email (nếu email tồn tại)' // Adjusted message slightly
     ));
   } catch (error) {
     next(error);
@@ -277,21 +277,7 @@ exports.updatePassword = async (req, res, next) => {
   }
 };
 
-/**
- * @desc    Lấy danh sách người đọc bài
- * @route   GET /api/users/readers
- * @access  Public
- */
-exports.getReaders = async (req, res, next) => {
-  try {
-    const readers = await User.find({ role: 'reader' })
-      .select('name email bio avatar ratings availability');
-
-    res.status(200).json(ApiResponse.success({ readers, count: readers.length }, 'Lấy danh sách người đọc bài thành công'));
-  } catch (error) {
-    next(error);
-  }
-};
+// Removed unused getReaders function
 
 /**
  * @desc    ADMIN - Lấy danh sách tất cả người dùng
@@ -346,39 +332,7 @@ exports.getUser = async (req, res, next) => {
   }
 };
 
-/**
- * @desc    ADMIN - Cập nhật thông tin người dùng
- * @route   PUT /api/users/admin/:id
- * @access  Admin
- */
-exports.updateUser = async (req, res, next) => {
-  try {
-    const fieldsToUpdate = {};
-    
-    // Các trường được phép cập nhật bởi admin
-    if (req.body.name !== undefined) fieldsToUpdate.name = req.body.name;
-    if (req.body.email !== undefined) fieldsToUpdate.email = req.body.email;
-    if (req.body.role !== undefined) fieldsToUpdate.role = req.body.role;
-    if (req.body.subscription !== undefined) fieldsToUpdate.subscription = req.body.subscription;
-
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      fieldsToUpdate,
-      {
-        new: true,
-        runValidators: true
-      }
-    );
-
-    if (!user) {
-      return next(new ApiError('Không tìm thấy người dùng', 404));
-    }
-
-    res.status(200).json(ApiResponse.success({ user }, 'Cập nhật thông tin người dùng thành công'));
-  } catch (error) {
-    next(error);
-  }
-};
+// Removed unused updateUser function
 
 /**
  * @desc    ADMIN - Xóa người dùng

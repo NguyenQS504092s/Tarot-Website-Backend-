@@ -38,19 +38,23 @@ exports.createRandomReading = async (userId, spreadName, question, deckName = 'R
     // Lấy thông tin người dùng để cập nhật số lần đọc bài
     const user = await User.findById(userId);
     
-    // Tăng số lần đọc bài trong ngày nếu người dùng là user thường
+    // Tăng số lần đọc bài trong ngày nếu người dùng là user thường (incrementDailyReadings no longer saves)
     if (user && user.role === 'user') {
-      await user.incrementDailyReadings();
+      user.incrementDailyReadings();
+      await user.save(); // Explicitly save user after incrementing
     }
     
-    // Populate thông tin chi tiết lá bài
-    const populatedReading = await Reading.findById(newReading._id)
-      .populate({
-        path: 'cards.cardId',
-        select: 'name type suit number imageUrl uprightMeaning reversedMeaning'
-      });
+    // Populate thông tin chi tiết lá bài trực tiếp
+    await newReading.populate({
+      path: 'cards.cardId',
+      select: 'name type suit number imageUrl uprightMeaning reversedMeaning'
+    });
+    await newReading.populate({ // Also populate user info
+        path: 'userId',
+        select: 'name email'
+    });
     
-    return populatedReading;
+    return newReading; // Return the populated object directly
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;

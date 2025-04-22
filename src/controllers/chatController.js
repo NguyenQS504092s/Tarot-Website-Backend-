@@ -2,6 +2,7 @@ const Chat = require('../models/chatModel');
 const User = require('../models/userModel');
 const Reading = require('../models/readingModel');
 const ApiError = require('../utils/apiError');
+const ApiResponse = require('../utils/apiResponse'); // Import ApiResponse
 
 /**
  * @desc    Lấy danh sách cuộc trò chuyện của người dùng hiện tại
@@ -10,13 +11,10 @@ const ApiError = require('../utils/apiError');
  */
 exports.getUserChats = async (req, res, next) => {
   try {
-    const chats = await Chat.findChatsForUser(req.user._id);
+    // findChatsForUser already populates correctly after model fix
+    const chats = await Chat.findChatsForUser(req.user._id); 
 
-    res.status(200).json({
-      success: true,
-      count: chats.length,
-      data: chats
-    });
+    res.status(200).json(ApiResponse.success(chats, 'Lấy danh sách cuộc trò chuyện thành công'));
   } catch (error) {
     next(error);
   }
@@ -30,7 +28,7 @@ exports.getUserChats = async (req, res, next) => {
 exports.getChatById = async (req, res, next) => {
   try {
     const chat = await Chat.findById(req.params.id)
-      .populate('participants', 'name avatar email role')
+      .populate('participants', 'name email role') // Removed avatar
       .populate('relatedReading');
 
     // Kiểm tra xem cuộc trò chuyện có tồn tại không
@@ -47,13 +45,17 @@ exports.getChatById = async (req, res, next) => {
       return next(new ApiError('Bạn không có quyền truy cập cuộc trò chuyện này', 403));
     }
 
-    // Đánh dấu tin nhắn là đã đọc
-    await chat.markAllAsRead(req.user._id);
+    // Đánh dấu tin nhắn là đã đọc (markAllAsRead no longer saves)
+    chat.markAllAsRead(req.user._id); 
+    await chat.save(); // Explicitly save after marking as read
 
-    res.status(200).json({
-      success: true,
-      data: chat
-    });
+    // Re-fetch or use the modified chat instance for response
+    const updatedChat = await Chat.findById(req.params.id)
+                                  .populate('participants', 'name email role')
+                                  .populate('relatedReading');
+
+
+    res.status(200).json(ApiResponse.success(updatedChat, 'Lấy thông tin cuộc trò chuyện thành công'));
   } catch (error) {
     next(error);
   }
@@ -102,25 +104,23 @@ exports.createChat = async (req, res, next) => {
       scheduledTime: scheduledTime
     });
 
-    // Thêm tin nhắn đầu tiên nếu có
+    // Thêm tin nhắn đầu tiên nếu có (addMessage no longer saves)
     if (message) {
-      await newChat.addMessage(req.user._id, message);
+      newChat.addMessage(req.user._id, message);
     }
 
-    // Thêm tin nhắn hệ thống
-    await newChat.addSystemMessage(`Cuộc trò chuyện đã được tạo bởi ${req.user.name || 'Người dùng'}`);
+    // Thêm tin nhắn hệ thống (addSystemMessage no longer saves)
+    newChat.addSystemMessage(`Cuộc trò chuyện đã được tạo bởi ${req.user.name || 'Người dùng'}`);
 
-    // Lưu cuộc trò chuyện và populate participants
-    await newChat.save();
+    // Lưu cuộc trò chuyện
+    await newChat.save(); 
     
+    // Populate participants after saving
     const populatedChat = await Chat.findById(newChat._id)
-      .populate('participants', 'name avatar email role')
+      .populate('participants', 'name email role') // Removed avatar
       .populate('relatedReading');
 
-    res.status(201).json({
-      success: true,
-      data: populatedChat
-    });
+    res.status(201).json(ApiResponse.success(populatedChat, 'Tạo cuộc trò chuyện thành công', 201));
   } catch (error) {
     next(error);
   }
@@ -171,18 +171,16 @@ exports.sendMessage = async (req, res, next) => {
       chat.status = 'active';
     }
 
-    // Thêm tin nhắn mới
-    await chat.addMessage(req.user._id, content, contentType, attachments);
+    // Thêm tin nhắn mới (addMessage no longer saves)
+    chat.addMessage(req.user._id, content, contentType, attachments);
+    await chat.save(); // Explicitly save
 
     // Lấy cuộc trò chuyện đã cập nhật và populate participants
     const updatedChat = await Chat.findById(chatId)
-      .populate('participants', 'name avatar email role')
+      .populate('participants', 'name email role') // Removed avatar
       .populate('relatedReading');
 
-    res.status(201).json({
-      success: true,
-      data: updatedChat
-    });
+    res.status(201).json(ApiResponse.success(updatedChat, 'Gửi tin nhắn thành công', 201));
   } catch (error) {
     next(error);
   }
@@ -212,13 +210,11 @@ exports.markChatAsRead = async (req, res, next) => {
       return next(new ApiError('Bạn không có quyền truy cập cuộc trò chuyện này', 403));
     }
 
-    // Đánh dấu tất cả tin nhắn là đã đọc
-    await chat.markAllAsRead(req.user._id);
+    // Đánh dấu tất cả tin nhắn là đã đọc (markAllAsRead no longer saves)
+    chat.markAllAsRead(req.user._id);
+    await chat.save(); // Explicitly save
 
-    res.status(200).json({
-      success: true,
-      message: 'Đã đánh dấu tất cả tin nhắn là đã đọc'
-    });
+    res.status(200).json(ApiResponse.success(null, 'Đã đánh dấu tất cả tin nhắn là đã đọc'));
   } catch (error) {
     next(error);
   }
@@ -255,24 +251,22 @@ exports.updateChatStatus = async (req, res, next) => {
     if (scheduledTime) chat.scheduledTime = scheduledTime;
     if (title) chat.title = title;
 
-    // Nếu đổi trạng thái sang completed hoặc canceled, thêm tin nhắn hệ thống
+    // Nếu đổi trạng thái sang completed hoặc canceled, thêm tin nhắn hệ thống (addSystemMessage no longer saves)
     if (status === 'completed') {
-      await chat.addSystemMessage(`Cuộc trò chuyện đã kết thúc bởi ${req.user.name || 'Người dùng'}`);
+      chat.addSystemMessage(`Cuộc trò chuyện đã kết thúc bởi ${req.user.name || 'Người dùng'}`);
     } else if (status === 'canceled') {
-      await chat.addSystemMessage(`Cuộc trò chuyện đã bị hủy bởi ${req.user.name || 'Người dùng'}`);
-    } else {
-      await chat.save();
+      chat.addSystemMessage(`Cuộc trò chuyện đã bị hủy bởi ${req.user.name || 'Người dùng'}`);
     }
+    
+    // Save unconditionally after modifications
+    await chat.save(); 
 
     // Lấy cuộc trò chuyện đã cập nhật và populate participants
     const updatedChat = await Chat.findById(chatId)
-      .populate('participants', 'name avatar email role')
+      .populate('participants', 'name email role') // Removed avatar
       .populate('relatedReading');
 
-    res.status(200).json({
-      success: true,
-      data: updatedChat
-    });
+    res.status(200).json(ApiResponse.success(updatedChat, 'Cập nhật trạng thái cuộc trò chuyện thành công'));
   } catch (error) {
     next(error);
   }
@@ -302,24 +296,22 @@ exports.scheduleChat = async (req, res, next) => {
       status: 'pending'
     });
 
-    // Thêm tin nhắn hệ thống
-    await newChat.addSystemMessage(`Cuộc trò chuyện đã được lên lịch cho ${new Date(scheduledTime).toLocaleString()}`);
+    // Thêm tin nhắn hệ thống (no longer saves)
+    newChat.addSystemMessage(`Cuộc trò chuyện đã được lên lịch cho ${new Date(scheduledTime).toLocaleString()}`);
 
-    // Thêm tin nhắn về câu hỏi của người dùng nếu có
+    // Thêm tin nhắn về câu hỏi của người dùng nếu có (no longer saves)
     if (question) {
-      await newChat.addMessage(req.user._id, `Câu hỏi của tôi: ${question}`);
+      newChat.addMessage(req.user._id, `Câu hỏi của tôi: ${question}`);
     }
 
-    // Lưu cuộc trò chuyện và populate participants
-    await newChat.save();
+    // Lưu cuộc trò chuyện
+    await newChat.save(); 
     
+    // Populate participants after saving
     const populatedChat = await Chat.findById(newChat._id)
-      .populate('participants', 'name avatar email role');
+      .populate('participants', 'name email role'); // Removed avatar
 
-    res.status(201).json({
-      success: true,
-      data: populatedChat
-    });
+    res.status(201).json(ApiResponse.success(populatedChat, 'Lên lịch cuộc trò chuyện thành công', 201));
   } catch (error) {
     next(error);
   }
@@ -341,14 +333,10 @@ exports.getUpcomingSchedules = async (req, res, next) => {
       status: 'pending',
       isActive: true
     })
-      .populate('participants', 'name avatar email role')
+      .populate('participants', 'name email role') // Removed avatar
       .sort({ scheduledTime: 1 });
 
-    res.status(200).json({
-      success: true,
-      count: schedules.length,
-      data: schedules
-    });
+    res.status(200).json(ApiResponse.success(schedules, 'Lấy danh sách lịch hẹn sắp tới thành công'));
   } catch (error) {
     next(error);
   }

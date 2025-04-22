@@ -19,11 +19,13 @@ router.get('/subscription', trackPerformance('getUserSubscription'), paymentCont
 router.post('/cancel-subscription', trackPerformance('cancelUserSubscription'), paymentController.cancelUserSubscription);
 router.get('/payment-history', trackPerformance('getPaymentHistory'), paymentController.getPaymentHistory);
 
-// Routes cho admin
+// Routes cho admin - Middleware applied to /admin path
 router.use('/admin', authMiddleware.protect, authMiddleware.restrictTo('admin'));
-router.post('/admin/plans', trackPerformance('createSubscriptionPlan'), paymentController.createSubscriptionPlan);
-router.put('/admin/plans/:id', trackPerformance('updateSubscriptionPlan'), paymentController.updateSubscriptionPlan);
-router.delete('/admin/plans/:id', trackPerformance('deleteSubscriptionPlan'), paymentController.deleteSubscriptionPlan);
-router.get('/admin/payments', trackPerformance('getAllPayments'), paymentController.getAllPayments);
+
+// Define routes relative to /admin
+router.post('/admin/plans', trackPerformance('createSubscriptionPlan'), paymentController.createSubscriptionPlan); // Path: /api/payments/admin/plans
+router.put('/admin/plans/:id', trackPerformance('updateSubscriptionPlan'), paymentController.updateSubscriptionPlan); // Path: /api/payments/admin/plans/:id
+router.delete('/admin/plans/:id', trackPerformance('deleteSubscriptionPlan'), paymentController.deleteSubscriptionPlan); // Path: /api/payments/admin/plans/:id
+router.get('/admin/payments', trackPerformance('getAllPayments'), paymentController.getAllPayments); // Path: /api/payments/admin/payments
 
 module.exports = router;

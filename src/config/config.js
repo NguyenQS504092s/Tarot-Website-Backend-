@@ -1,14 +1,3 @@
-const logger = require('../utils/logger');
-
-// Hàm kiểm tra biến môi trường quan trọng
-const checkRequiredEnv = (name) => {
-  if (!process.env[name]) {
-    logger.warn(`Biến môi trường quan trọng ${name} không được định nghĩa!`);
-    return false;
-  }
-  return true;
-};
-
 // Cấu hình chính của ứng dụng
 const config = {
   env: process.env.NODE_ENV || 'development',
@@ -24,28 +13,19 @@ const config = {
   
   // Ứng dụng
   apiPrefix: process.env.API_PREFIX || '/api',
-  freeReadingsPerDay: parseInt(process.env.FREE_READINGS_PER_DAY) || 3,
+  freeReadingsPerDay: parseInt(process.env.FREE_READINGS_PER_DAY, 10) || 3,
   
   // External services
   stripeSecretKey: process.env.STRIPE_SECRET_KEY,
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
-  
-  // Kiểm tra các biến môi trường bắt buộc
-  isValid: function() {
-    // Kiểm tra các biến môi trường bắt buộc
-    let isValid = true;
-    
-    isValid = checkRequiredEnv('JWT_SECRET') && isValid;
-    isValid = checkRequiredEnv('MONGODB_URI') && isValid;
-    
-    if (process.env.NODE_ENV === 'production') {
-      isValid = checkRequiredEnv('STRIPE_SECRET_KEY') && isValid;
-      isValid = checkRequiredEnv('STRIPE_WEBHOOK_SECRET') && isValid;
-    }
-    
-    return isValid;
-  }
+
+  // Performance
+  performanceThresholdMs: parseInt(process.env.PERFORMANCE_THRESHOLD_MS, 10) || 1000,
+
+  // Rate Limiting
+  rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 15 * 60 * 1000, // 15 minutes
+  rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX, 10) || 100
 };
 
 module.exports = config;

@@ -1,4 +1,5 @@
 const winston = require('winston');
+require('winston-daily-rotate-file'); // Import the daily rotate file transport
 
 // Định nghĩa cấu hình cho logger
 const logger = winston.createLogger({
@@ -13,14 +14,22 @@ const logger = winston.createLogger({
   ),
   defaultMeta: { service: 'tarot-backend' },
   transports: [
-    // Ghi log lỗi vào file error.log
-    new winston.transports.File({ 
-      filename: 'logs/error.log', 
-      level: 'error' 
+    // Ghi log lỗi vào file error.log với xoay vòng hàng ngày
+    new winston.transports.DailyRotateFile({
+      filename: 'logs/%DATE%-error.log',
+      datePattern: 'YYYY-MM-DD',
+      zippedArchive: true,
+      maxSize: '20m', // Max size 20MB
+      maxFiles: '14d', // Keep logs for 14 days
+      level: 'error'
     }),
-    // Ghi tất cả các log vào file combined.log
-    new winston.transports.File({ 
-      filename: 'logs/combined.log' 
+    // Ghi tất cả các log vào file combined.log với xoay vòng hàng ngày
+    new winston.transports.DailyRotateFile({
+      filename: 'logs/%DATE%-combined.log',
+      datePattern: 'YYYY-MM-DD',
+      zippedArchive: true,
+      maxSize: '20m',
+      maxFiles: '14d'
     })
   ]
 });

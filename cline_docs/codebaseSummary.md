@@ -8,8 +8,8 @@
 - **`src/middlewares/`:** Contains custom middleware functions (e.g., authentication, error handling).
 - **`src/models/`:** Defines Mongoose schemas for database collections.
 - **`src/routes/`:** Defines API endpoints and maps them to controller functions.
-- **`src/services/`:** Contains the core business logic.
-- **`src/utils/`:** Holds utility functions (e.g., logger, API error/response classes).
+- **`src/services/`:** Contains the core business logic (e.g., `cardService`, `readingService`).
+- **`src/utils/`:** Holds utility functions (e.g., `logger`, `apiError`, `apiResponse`, `stringUtils`).
 
 ## Data Flow
 - Incoming requests hit `src/app.js`.
@@ -21,12 +21,25 @@
 
 ## External Dependencies
 - **Core:** Express.js, Mongoose, dotenv
-- **Middleware:** helmet, cors, express-rate-limit
+- **Middleware:** helmet, cors, express-rate-limit, winston, winston-daily-rotate-file
 - **External APIs:** Stripe (for payments)
 - **Dependency Management:** `package.json` (npm or yarn assumed) - *Specific versions not reviewed yet.*
 
 ## Recent Significant Changes
-- **Initial Review (2025-04-22):** Reviewed `src/app.js`, `src/server.js`, `plan.md`, and project structure. No critical errors found in these specific files. Basic setup appears sound, following standard Express practices. Identified potential areas for further review: request logging, input validation, detailed auth/error middleware logic, DB logic, and test coverage.
+- **Detailed Review & Fixes (2025-04-22):**
+    - Reviewed and applied fixes across `config`, `middlewares`, `utils`, `models`, `routes`, `controllers`, and `services`.
+    - Standardized response formatting using `ApiResponse`.
+    - Ensured consistent error handling with `ApiError`.
+    - Removed redundant code, fallback data, and unused functions.
+    - Corrected Mongoose schema options (deprecated options, enums, indexes).
+    - Refactored model methods to remove `save()` side effects.
+    - Centralized configuration usage (rate limits, performance thresholds).
+    - Added log rotation using `winston-daily-rotate-file`.
+    - Improved efficiency in some service/controller logic (e.g., population).
+    - Corrected route definitions (prefixing, middleware application).
+    - Added missing controller functions (`deleteSubscriptionPlan`, `getAllPayments`).
+    - Created `stringUtils` for reusable normalization.
+    - **Key Remaining Recommendation:** Implement comprehensive input validation (e.g., using `express-validator`).
 
 ## User Feedback Integration
 - Not applicable yet.
@@ -35,4 +48,5 @@
 - `cline_docs/projectRoadmap.md`
 - `cline_docs/currentTask.md`
 - `cline_docs/techStack.md`
+- `cline_docs/stringUtils.js` (Utility functions)
 - `plan.md` (Initial project plan)
