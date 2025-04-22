@@ -63,10 +63,10 @@ class ApiResponse {
    * @param {String} message - Thông báo phản hồi
    * @returns {Object} - Đối tượng phản hồi API với metadata phân trang
    */
-  static pagination(data, page, limit, total, message = 'Lấy dữ liệu thành công') {
+  static pagination(data, page, limit, total, message = 'Thao tác thành công') {
     const totalPages = Math.ceil(total / limit);
-    const hasNextPage = page < totalPages;
-    const hasPrevPage = page > 1;
+    const hasNext = page < totalPages;
+    const hasPrev = page > 1;
 
     return {
       success: true,
@@ -78,8 +78,8 @@ class ApiResponse {
         limit,
         total,
         totalPages,
-        hasNextPage,
-        hasPrevPage
+        hasNext,
+        hasPrev
       }
     };
   }

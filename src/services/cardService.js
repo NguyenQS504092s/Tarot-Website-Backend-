@@ -36,7 +36,7 @@ exports.getCardsByDeck = async (deckName) => {
     if (error instanceof ApiError) {
       throw error;
     }
-    throw new ApiError(`Lỗi khi lấy thông tin lá bài: ${error.message}`, 500);
+    throw new ApiError(`Lỗi khi lấy lá bài theo bộ: ${error.message}`, 500);
   }
 };
 

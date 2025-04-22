@@ -138,36 +138,58 @@ const UserSubscriptionSchema = new mongoose.Schema({
   }]
 }, { timestamps: true });
 
-// Static method để tìm gói dịch vụ hiện tại của user
-UserSubscriptionSchema.statics.findActiveSubscription = async function(userId) {
-  const now = new Date();
-  return this.findOne({
-    userId,
-    isActive: true,
-    endDate: { $gt: now }
-  }).populate('plan');
-};
-
-// Static method để kiểm tra xem user có gói dịch vụ active không
-UserSubscriptionSchema.statics.hasActiveSubscription = async function(userId) {
-  const subscription = await this.findActiveSubscription(userId);
-  return !!subscription;
-};
-
-// Static method để tính ngày kết thúc dựa vào gói dịch vụ
+/**
+ * Tính toán ngày kết thúc gói đăng ký
+ * @param {Object} plan - Đối tượng gói đăng ký
+ * @param {Date} startDate - Ngày bắt đầu gói đăng ký
+ * @returns {Date} Ngày kết thúc gói đăng ký
+ */
 UserSubscriptionSchema.statics.calculateEndDate = function(plan, startDate = new Date()) {
-  const start = new Date(startDate);
+  const endDate = new Date(startDate);
   
-  switch(plan.durationUnit) {
+  switch (plan.durationUnit) {
     case 'day':
-      return new Date(start.setDate(start.getDate() + plan.duration));
+      endDate.setDate(endDate.getDate() + plan.duration);
+      break;
     case 'month':
-      return new Date(start.setMonth(start.getMonth() + plan.duration));
+      endDate.setMonth(endDate.getMonth() + plan.duration);
+      break;
     case 'year':
-      return new Date(start.setFullYear(start.getFullYear() + plan.duration));
+      endDate.setFullYear(endDate.getFullYear() + plan.duration);
+      break;
     default:
-      return new Date(start.setMonth(start.getMonth() + plan.duration));
+      endDate.setMonth(endDate.getMonth() + 1); // Mặc định 1 tháng
   }
+  
+  return endDate;
+};
+
+/**
+ * Kiểm tra xem người dùng có gói đăng ký còn hoạt động không
+ * @param {String} userId - ID người dùng
+ * @returns {Promise<Boolean>} true nếu có gói đang hoạt động
+ */
+UserSubscriptionSchema.statics.hasActiveSubscription = async function(userId) {
+  const activeSubscription = await this.findOne({
+    userId: userId,
+    isActive: true,
+    endDate: { $gt: new Date() }
+  });
+  
+  return !!activeSubscription;
+};
+
+/**
+ * Tìm gói đăng ký đang hoạt động của người dùng
+ * @param {String} userId - ID người dùng
+ * @returns {Promise<Object|null>} Đối tượng gói đăng ký hoặc null
+ */
+UserSubscriptionSchema.statics.findActiveSubscription = async function(userId) {
+  return this.findOne({
+    userId: userId,
+    isActive: true,
+    endDate: { $gt: new Date() }
+  }).populate('plan');
 };
 
 // Pre save hook để tính ngày kết thúc nếu không được cung cấp

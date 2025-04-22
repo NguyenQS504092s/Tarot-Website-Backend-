@@ -214,39 +214,62 @@ exports.createCheckoutSession = async (req, res, next) => {
  * @access  Public
  */
 exports.stripeWebhook = async (req, res) => {
-  const sig = req.headers['stripe-signature'];
+  let signature = req.headers['stripe-signature'];
   let event;
 
   try {
-    event = stripe.webhooks.constructEvent(
-      req.body,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET
-    );
-  } catch (err) {
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
+    // Kiểm tra xem STRIPE_WEBHOOK_SECRET đã được cấu hình chưa
+    if (!process.env.STRIPE_WEBHOOK_SECRET) {
+      console.error('STRIPE_WEBHOOK_SECRET is not defined');
+      return res.status(500).send('Server không được cấu hình đúng');
+    }
 
-  // Xử lý các sự kiện
-  try {
+    try {
+      event = stripe.webhooks.constructEvent(
+        req.body,
+        signature,
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
+    } catch (err) {
+      console.error(`Webhook signature verification failed: ${err.message}`);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    // Xử lý các sự kiện
     switch (event.type) {
       case 'checkout.session.completed':
-        await handleCheckoutSessionCompleted(event.data.object);
+        try {
+          await handleCheckoutSessionCompleted(event.data.object);
+        } catch (error) {
+          console.error(`Error handling checkout.session.completed: ${error.message}`);
+          // Không return ở đây để tránh Stripe gửi lại sự kiện
+        }
         break;
       case 'invoice.paid':
-        await handleInvoicePaid(event.data.object);
+        try {
+          await handleInvoicePaid(event.data.object);
+        } catch (error) {
+          console.error(`Error handling invoice.paid: ${error.message}`);
+        }
         break;
       case 'customer.subscription.deleted':
-        await handleSubscriptionDeleted(event.data.object);
+        try {
+          await handleSubscriptionDeleted(event.data.object);
+        } catch (error) {
+          console.error(`Error handling customer.subscription.deleted: ${error.message}`);
+        }
         break;
       default:
         console.log(`Unhandled event type ${event.type}`);
     }
 
+    // Trả về thành công cho Stripe để không gửi lại webhook
     res.status(200).json({ received: true });
   } catch (error) {
-    console.error(`Error processing webhook: ${error.message}`);
-    res.status(500).send('Internal Server Error');
+    console.error(`General webhook processing error: ${error.message}`);
+    // Trả về 200 để Stripe không gửi lại sự kiện
+    // Các lỗi được ghi log nhưng không trả về client
+    res.status(200).send('Webhook received');
   }
 };
 

@@ -17,18 +17,6 @@ const ApiError = require('../utils/apiError');
  */
 exports.createRandomReading = async (userId, spreadName, question, deckName = 'Rider Waite Smith', allowReversed = true) => {
   try {
-    // Kiểm tra người dùng có tồn tại không
-    const user = await User.findById(userId);
-    if (!user) {
-      throw new ApiError('Người dùng không tồn tại', 404);
-    }
-
-    // Kiểm tra và reset số lần đọc bài miễn phí hàng ngày nếu cần
-    const canCreateReading = user.checkAndResetDailyReadings();
-    if (!canCreateReading && user.role === 'user') {
-      throw new ApiError('Bạn đã sử dụng hết số lần đọc bài miễn phí hôm nay', 403);
-    }
-    
     // Rút lá bài ngẫu nhiên dựa trên kiểu trải bài
     const drawnCards = await cardService.drawCardsForSpread(spreadName, deckName, allowReversed);
     
@@ -47,8 +35,11 @@ exports.createRandomReading = async (userId, spreadName, question, deckName = 'R
       cards
     });
 
+    // Lấy thông tin người dùng để cập nhật số lần đọc bài
+    const user = await User.findById(userId);
+    
     // Tăng số lần đọc bài trong ngày nếu người dùng là user thường
-    if (user.role === 'user') {
+    if (user && user.role === 'user') {
       await user.incrementDailyReadings();
     }
     

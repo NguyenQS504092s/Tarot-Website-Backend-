@@ -81,6 +81,22 @@ ChatSchema.pre('save', function(next) {
   next();
 });
 
+// Middleware: Tự động populate thông tin người dùng
+ChatSchema.pre(/^find/, function(next) {
+  this.populate({
+    path: 'participants',
+    select: 'name email avatar role'
+  });
+  
+  // Thêm populate cho relatedReading
+  this.populate({
+    path: 'relatedReading',
+    select: 'spread question cards createdAt'
+  });
+  
+  next();
+});
+
 // Method để thêm tin nhắn mới
 ChatSchema.methods.addMessage = async function(sender, content, contentType = 'text', attachments = []) {
   this.messages.push({
@@ -100,12 +116,17 @@ ChatSchema.methods.addSystemMessage = async function(content) {
 
 // Đánh dấu tất cả tin nhắn là đã đọc
 ChatSchema.methods.markAllAsRead = async function(userId) {
-  this.messages.forEach(message => {
-    if (message.sender.toString() !== userId.toString()) {
-      message.isRead = true;
-    }
-  });
-  return this.save();
+  // Chỉ cập nhật trạng thái đã đọc cho tin nhắn của người khác
+  const messages = this.messages.filter(
+    message => message.sender.toString() !== userId.toString() && !message.isRead
+  );
+
+  for (let message of messages) {
+    message.isRead = true;
+    message.readAt = new Date();
+  }
+
+  await this.save();
 };
 
 // Static để tìm tất cả cuộc trò chuyện của một người dùng

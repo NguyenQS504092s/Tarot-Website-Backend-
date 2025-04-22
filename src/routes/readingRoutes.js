@@ -1,32 +1,34 @@
 const express = require('express');
 const readingController = require('../controllers/readingController');
 const authMiddleware = require('../middlewares/authMiddleware');
+const { trackPerformance } = require('../middlewares/performanceMiddleware');
 
 const router = express.Router();
 
 // Tất cả routes yêu cầu đăng nhập
 router.use(authMiddleware.protect);
 
+// Routes cụ thể phải đặt trước route có pattern chung
 // Routes cho người dùng
-router.post('/', readingController.createReading);
-router.post('/random', readingController.createRandomReading); // API mới cho việc tạo đọc bài ngẫu nhiên
-router.get('/history', readingController.getUserReadingHistory);
-router.get('/:id', readingController.getReadingById);
-router.get('/:id/auto-interpretation', readingController.getAutoInterpretation); // API mới cho diễn giải tự động
-router.put('/:id/feedback', readingController.addFeedbackToReading);
+router.post('/', trackPerformance('createReading'), readingController.createReading);
+router.post('/random', trackPerformance('createRandomReading'), readingController.createRandomReading);
+router.get('/history', trackPerformance('getUserReadingHistory'), readingController.getUserReadingHistory);
+router.get('/spreads', readingController.getAllSpreads);
 
-// Routes cho người đọc bài
+// Routes cho reader
 router.use('/reader', authMiddleware.restrictTo('reader', 'admin'));
-router.get('/reader/pending', readingController.getPendingReadings);
-router.put('/reader/:id/interpret', readingController.addInterpretation);
+router.get('/reader/pending', trackPerformance('getPendingReadings'), readingController.getPendingReadings);
+router.put('/reader/:id/interpret', trackPerformance('addInterpretation'), readingController.addInterpretation);
 
 // Routes cho admin
 router.use('/admin', authMiddleware.restrictTo('admin'));
-router.get('/admin/all', readingController.getAllReadings);
+router.get('/admin/all', trackPerformance('getAllReadings'), readingController.getAllReadings);
 router.delete('/admin/:id', readingController.deleteReading);
-
-// Routes cho spread (cách trải bài)
-router.get('/spreads', readingController.getAllSpreads);
 router.post('/spreads', authMiddleware.restrictTo('admin'), readingController.createSpread);
+
+// Route với ID phải đặt sau các route cụ thể
+router.get('/:id', trackPerformance('getReadingById'), readingController.getReadingById);
+router.get('/:id/auto-interpretation', trackPerformance('getAutoInterpretation'), readingController.getAutoInterpretation);
+router.put('/:id/feedback', trackPerformance('addFeedbackToReading'), readingController.addFeedbackToReading);
 
 module.exports = router;

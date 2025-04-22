@@ -2,32 +2,21 @@ const express = require('express');
 const router = express.Router();
 const chatController = require('../controllers/chatController');
 const authMiddleware = require('../middlewares/authMiddleware');
+const { trackPerformance } = require('../middlewares/performanceMiddleware');
 
 // Tất cả routes cần đăng nhập
 router.use(authMiddleware.protect);
 
-// Lấy danh sách các cuộc trò chuyện của người dùng
-router.get('/', chatController.getUserChats);
+// Routes cụ thể phải đặt trước routes có params
+router.get('/', trackPerformance('getUserChats'), chatController.getUserChats);
+router.post('/', trackPerformance('createChat'), chatController.createChat);
+router.post('/schedule', trackPerformance('scheduleChat'), chatController.scheduleChat);
+router.get('/schedules/upcoming', trackPerformance('getUpcomingSchedules'), chatController.getUpcomingSchedules);
 
-// Lấy thông tin chi tiết một cuộc trò chuyện
-router.get('/:id', chatController.getChatById);
-
-// Tạo cuộc trò chuyện mới
-router.post('/', chatController.createChat);
-
-// Gửi tin nhắn mới trong cuộc trò chuyện
-router.post('/:id/messages', chatController.sendMessage);
-
-// Đánh dấu tin nhắn là đã đọc
-router.put('/:id/read', chatController.markChatAsRead);
-
-// Cập nhật trạng thái cuộc trò chuyện (chỉ reader/admin có thể thay đổi trạng thái)
-router.put('/:id', chatController.updateChatStatus);
-
-// Lên lịch hẹn trò chuyện mới
-router.post('/schedule', chatController.scheduleChat);
-
-// Lấy danh sách lịch hẹn sắp tới
-router.get('/schedules/upcoming', chatController.getUpcomingSchedules);
+// Routes với params phải đặt sau route cụ thể
+router.get('/:id', trackPerformance('getChatById'), chatController.getChatById);
+router.put('/:id', trackPerformance('updateChatStatus'), chatController.updateChatStatus);
+router.post('/:id/messages', trackPerformance('sendMessage'), chatController.sendMessage);
+router.put('/:id/read', trackPerformance('markChatAsRead'), chatController.markChatAsRead);
 
 module.exports = router;

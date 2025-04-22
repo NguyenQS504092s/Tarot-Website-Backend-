@@ -327,7 +327,7 @@ exports.scheduleChat = async (req, res, next) => {
 
 /**
  * @desc    Lấy danh sách lịch hẹn sắp tới (cho reader hoặc user)
- * @route   GET /api/chats/schedules
+ * @route   GET /api/chats/schedules/upcoming
  * @access  Private
  */
 exports.getUpcomingSchedules = async (req, res, next) => {

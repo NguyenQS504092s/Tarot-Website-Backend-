@@ -74,12 +74,39 @@ ReadingSchema.virtual('cardsDetail', {
   foreignField: '_id'
 });
 
+// Virtual populate để lấy thông tin người dùng
+ReadingSchema.virtual('userDetail', {
+  ref: 'User',
+  localField: 'userId',
+  foreignField: '_id',
+  justOne: true
+});
+
+// Virtual populate để lấy thông tin người đọc bài
+ReadingSchema.virtual('readerDetail', {
+  ref: 'User',
+  localField: 'readerId',
+  foreignField: '_id',
+  justOne: true
+});
+
 // Middleware: Populate các thông tin liên quan khi query
 ReadingSchema.pre(/^find/, function(next) {
   this.populate({
-    path: 'cardsDetail',
+    path: 'cards.cardId',
     select: 'name imageUrl uprightMeaning reversedMeaning'
   });
+  
+  // Thêm populate cho userDetail và readerDetail nhưng chỉ lấy thông tin cơ bản
+  this.populate({
+    path: 'userId',
+    select: 'name email avatar'
+  })
+  .populate({
+    path: 'readerId',
+    select: 'name email avatar'
+  });
+  
   next();
 });
 

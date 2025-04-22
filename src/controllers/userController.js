@@ -250,7 +250,7 @@ exports.resetPassword = async (req, res, next) => {
  * @route   PUT /api/users/change-password
  * @access  Private
  */
-exports.changePassword = async (req, res, next) => {
+exports.updatePassword = async (req, res, next) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
@@ -322,6 +322,25 @@ exports.getAllUsers = async (req, res, next) => {
         'Lấy danh sách người dùng thành công'
       )
     );
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    ADMIN - Lấy thông tin chi tiết một người dùng
+ * @route   GET /api/users/:id
+ * @access  Admin
+ */
+exports.getUser = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return next(new ApiError('Không tìm thấy người dùng', 404));
+    }
+
+    res.status(200).json(ApiResponse.success({ user }, 'Lấy thông tin người dùng thành công'));
   } catch (error) {
     next(error);
   }

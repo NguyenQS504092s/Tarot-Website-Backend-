@@ -3,11 +3,12 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const dotenv = require('dotenv');
+const logger = require('./utils/logger');
 
 // Load environment variables
 dotenv.config();
 
-// Import routes (sẽ tạo sau)
+// Import routes
 const userRoutes = require('./routes/userRoutes');
 const cardRoutes = require('./routes/cardRoutes');
 const readingRoutes = require('./routes/readingRoutes');
@@ -23,15 +24,25 @@ const app = express();
 
 // Security middleware
 app.use(helmet());
-app.use(cors());
+
+// CORS configuration
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN || '*',
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+  credentials: true
+};
+app.use(cors(corsOptions));
 
 // Rate limiting
 const limiter = rateLimit({
   windowMs: process.env.RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000, // 15 minutes
-  max: process.env.RATE_LIMIT_MAX || 100 // limit each IP to 100 requests per windowMs
+  max: process.env.RATE_LIMIT_MAX || 100, // limit each IP to 100 requests per windowMs
+  message: 'Quá nhiều yêu cầu từ IP của bạn, vui lòng thử lại sau 15 phút'
 });
 
-// Apply rate limiting to all requests
+// Apply rate limiting to all API routes
 app.use('/api', limiter);
 
 // Body parser middleware
@@ -54,7 +65,24 @@ app.get('/', (req, res) => {
   res.send('Welcome to Tarot Website API');
 });
 
-// Error handler middleware
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'UP',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Handle 404 - Route not found
+app.use((req, res, next) => {
+  res.status(404).json({
+    success: false,
+    message: 'Không tìm thấy đường dẫn yêu cầu',
+    code: 404
+  });
+});
+
+// Error handler middleware should be last
 app.use(errorMiddleware);
 
 // Export app for testing

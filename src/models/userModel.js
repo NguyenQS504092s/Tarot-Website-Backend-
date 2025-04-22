@@ -88,37 +88,49 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
 
 // Method: Tạo JWT token - Phương thức cũ
 userSchema.methods.generateAuthToken = function() {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET không được định nghĩa trong biến môi trường');
+  }
   return jwt.sign(
     { id: this._id, role: this.role },
-    process.env.JWT_SECRET || config.jwtSecret,
-    { expiresIn: process.env.JWT_EXPIRES_IN || config.jwtExpiresIn }
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
 };
 
 // Method: Tạo JWT token (để tương thích với userController)
 userSchema.methods.getSignedJwtToken = function() {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET không được định nghĩa trong biến môi trường');
+  }
   return jwt.sign(
     { id: this._id, role: this.role },
-    process.env.JWT_SECRET || config.jwtSecret,
-    { expiresIn: process.env.JWT_EXPIRES_IN || config.jwtExpiresIn }
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
 };
 
 // Method: Tạo refresh token
 userSchema.methods.generateRefreshToken = function() {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET không được định nghĩa trong biến môi trường');
+  }
   return jwt.sign(
     { id: this._id },
-    process.env.JWT_SECRET || config.jwtSecret,
-    { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || config.jwtRefreshExpiresIn }
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' }
   );
 };
 
 // Method: Tạo refresh token (để tương thích với userController)
 userSchema.methods.getRefreshToken = function() {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET không được định nghĩa trong biến môi trường');
+  }
   return jwt.sign(
     { id: this._id },
-    process.env.JWT_SECRET || config.jwtSecret,
-    { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || config.jwtRefreshExpiresIn }
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' }
   );
 };
 
@@ -133,16 +145,14 @@ userSchema.methods.checkAndResetDailyReadings = function() {
     now.getMonth() !== lastReset.getMonth() ||
     now.getFullYear() !== lastReset.getFullYear()
   ) {
+    // Reset lại số lần đọc bài hàng ngày
     this.dailyReadings.count = 0;
     this.dailyReadings.lastReset = now;
     this.save();
-  }
-  
-  // Người dùng premium không bị giới hạn số lần đọc
-  if (this.role === 'premium_user' || this.role === 'admin' || this.role === 'reader') {
     return true;
   }
   
+  // Kiểm tra xem còn lượt đọc bài miễn phí không
   const maxFreeReadings = process.env.FREE_READINGS_PER_DAY || config.freeReadingsPerDay || 3;
   return this.dailyReadings.count < maxFreeReadings;
 };
