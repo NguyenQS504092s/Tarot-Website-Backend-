@@ -12,6 +12,8 @@ const userRoutes = require('./routes/userRoutes');
 const cardRoutes = require('./routes/cardRoutes');
 const readingRoutes = require('./routes/readingRoutes');
 const astrologyRoutes = require('./routes/astrologyRoutes');
+const chatRoutes = require('./routes/chatRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
 
 // Import middleware
 const errorMiddleware = require('./middlewares/errorMiddleware');
@@ -36,11 +38,16 @@ app.use('/api', limiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Special handling for Stripe webhooks (raw body needed)
+app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
+
 // Routes
 app.use('/api/users', userRoutes);
 app.use('/api/cards', cardRoutes);
 app.use('/api/readings', readingRoutes);
 app.use('/api/horoscope', astrologyRoutes);
+app.use('/api/chats', chatRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Default route
 app.get('/', (req, res) => {

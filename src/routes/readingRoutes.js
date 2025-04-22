@@ -9,8 +9,10 @@ router.use(authMiddleware.protect);
 
 // Routes cho người dùng
 router.post('/', readingController.createReading);
+router.post('/random', readingController.createRandomReading); // API mới cho việc tạo đọc bài ngẫu nhiên
 router.get('/history', readingController.getUserReadingHistory);
 router.get('/:id', readingController.getReadingById);
+router.get('/:id/auto-interpretation', readingController.getAutoInterpretation); // API mới cho diễn giải tự động
 router.put('/:id/feedback', readingController.addFeedbackToReading);
 
 // Routes cho người đọc bài

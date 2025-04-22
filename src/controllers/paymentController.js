@@ -13,10 +13,10 @@ exports.getAllPlans = async (req, res, next) => {
   try {
     const plans = await SubscriptionPlan.find({ isActive: true }).sort('price');
 
-    res.status(200).json(new ApiResponse(true, {
-      count: plans.length,
-      plans
-    }, 'Lấy danh sách gói dịch vụ thành công'));
+    res.status(200).json(ApiResponse.success(
+      { plans, count: plans.length }, 
+      'Lấy danh sách gói dịch vụ thành công'
+    ));
   } catch (error) {
     next(error);
   }
@@ -35,7 +35,7 @@ exports.getPlanById = async (req, res, next) => {
       return next(new ApiError('Không tìm thấy gói dịch vụ', 404));
     }
 
-    res.status(200).json(new ApiResponse(true, { plan }, 'Lấy chi tiết gói dịch vụ thành công'));
+    res.status(200).json(ApiResponse.success({ plan }, 'Lấy chi tiết gói dịch vụ thành công'));
   } catch (error) {
     next(error);
   }
@@ -84,7 +84,7 @@ exports.createPlan = async (req, res, next) => {
       stripePriceId: stripePrice.id
     });
 
-    res.status(201).json(new ApiResponse(true, { plan }, 'Tạo gói dịch vụ thành công'));
+    res.status(201).json(ApiResponse.success(plan, 'Tạo gói dịch vụ thành công', 201));
   } catch (error) {
     next(error);
   }
@@ -138,7 +138,7 @@ exports.updatePlan = async (req, res, next) => {
 
     await plan.save();
 
-    res.status(200).json(new ApiResponse(true, { plan }, 'Cập nhật gói dịch vụ thành công'));
+    res.status(200).json(ApiResponse.success(plan, 'Cập nhật gói dịch vụ thành công'));
   } catch (error) {
     next(error);
   }
@@ -199,7 +199,7 @@ exports.createCheckoutSession = async (req, res, next) => {
       }
     });
 
-    res.status(200).json(new ApiResponse(true, {
+    res.status(200).json(ApiResponse.success({
       sessionId: session.id,
       url: session.url
     }, 'Tạo phiên thanh toán thành công'));
@@ -428,7 +428,7 @@ exports.getCurrentSubscription = async (req, res, next) => {
       };
     }
 
-    res.status(200).json(new ApiResponse(true, response, 'Lấy thông tin gói dịch vụ thành công'));
+    res.status(200).json(ApiResponse.success(response, 'Lấy thông tin gói dịch vụ thành công'));
   } catch (error) {
     next(error);
   }
@@ -459,7 +459,10 @@ exports.cancelSubscription = async (req, res, next) => {
     subscription.autoRenew = false;
     await subscription.save();
 
-    res.status(200).json(new ApiResponse(true, { message: 'Gói dịch vụ sẽ tự động hủy khi hết hạn' }, 'Hủy đăng ký gói dịch vụ thành công'));
+    res.status(200).json(ApiResponse.success(
+      { message: 'Gói dịch vụ sẽ tự động hủy khi hết hạn' }, 
+      'Hủy đăng ký gói dịch vụ thành công'
+    ));
   } catch (error) {
     next(error);
   }
@@ -476,7 +479,7 @@ exports.getPaymentHistory = async (req, res, next) => {
       .populate('subscriptionPlan', 'name description price currency')
       .sort({ createdAt: -1 });
 
-    res.status(200).json(new ApiResponse(true, {
+    res.status(200).json(ApiResponse.success({
       count: payments.length,
       payments
     }, 'Lấy lịch sử thanh toán thành công'));

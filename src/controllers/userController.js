@@ -1,5 +1,8 @@
 const User = require('../models/userModel');
 const jwt = require('jsonwebtoken');
+const ApiResponse = require('../utils/apiResponse');
+const ApiError = require('../utils/apiError');
+const crypto = require('crypto');
 
 /**
  * Tạo token JWT và trả về response
@@ -12,14 +15,11 @@ const sendToken = (user, statusCode, res) => {
   // Xóa password khỏi output
   user.password = undefined;
 
-  res.status(statusCode).json({
-    success: true,
+  res.status(statusCode).json(ApiResponse.success({
+    user,
     token,
-    refreshToken,
-    data: {
-      user
-    }
-  });
+    refreshToken
+  }, 'Xác thực thành công'));
 };
 
 /**
@@ -34,10 +34,7 @@ exports.register = async (req, res, next) => {
     // Kiểm tra đã tồn tại người dùng
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email đã được sử dụng'
-      });
+      return next(new ApiError('Email đã được sử dụng', 400));
     }
 
     // Tạo người dùng mới
@@ -65,28 +62,19 @@ exports.login = async (req, res, next) => {
 
     // Kiểm tra email và password
     if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Vui lòng cung cấp email và mật khẩu'
-      });
+      return next(new ApiError('Vui lòng cung cấp email và mật khẩu', 400));
     }
 
     // Kiểm tra người dùng tồn tại
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Email hoặc mật khẩu không chính xác'
-      });
+      return next(new ApiError('Email hoặc mật khẩu không chính xác', 401));
     }
 
     // Kiểm tra mật khẩu
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      return res.status(401).json({
-        success: false,
-        message: 'Email hoặc mật khẩu không chính xác'
-      });
+      return next(new ApiError('Email hoặc mật khẩu không chính xác', 401));
     }
 
     // Tạo token và trả về response
@@ -106,10 +94,7 @@ exports.refreshToken = async (req, res, next) => {
     const { refreshToken } = req.body;
 
     if (!refreshToken) {
-      return res.status(400).json({
-        success: false,
-        message: 'Không có refresh token'
-      });
+      return next(new ApiError('Không có refresh token', 400));
     }
 
     // Xác thực refresh token
@@ -118,24 +103,15 @@ exports.refreshToken = async (req, res, next) => {
     // Tìm người dùng
     const user = await User.findById(decoded.id);
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Token không hợp lệ'
-      });
+      return next(new ApiError('Token không hợp lệ', 401));
     }
 
     // Tạo token mới
     const token = user.getSignedJwtToken();
 
-    res.status(200).json({
-      success: true,
-      token
-    });
+    res.status(200).json(ApiResponse.success({ token }, 'Làm mới token thành công'));
   } catch (error) {
-    return res.status(401).json({
-      success: false,
-      message: 'Token không hợp lệ hoặc đã hết hạn'
-    });
+    return next(new ApiError('Token không hợp lệ hoặc đã hết hạn', 401));
   }
 };
 
@@ -148,12 +124,7 @@ exports.getMe = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id);
 
-    res.status(200).json({
-      success: true,
-      data: {
-        user
-      }
-    });
+    res.status(200).json(ApiResponse.success({ user }, 'Lấy thông tin người dùng thành công'));
   } catch (error) {
     next(error);
   }
@@ -183,12 +154,7 @@ exports.updateProfile = async (req, res, next) => {
       runValidators: true
     });
 
-    res.status(200).json({
-      success: true,
-      data: {
-        user
-      }
-    });
+    res.status(200).json(ApiResponse.success({ user }, 'Cập nhật thông tin cá nhân thành công'));
   } catch (error) {
     next(error);
   }
@@ -206,10 +172,7 @@ exports.forgotPassword = async (req, res, next) => {
     const user = await User.findOne({ email });
 
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'Không tìm thấy người dùng với email này'
-      });
+      return next(new ApiError('Không tìm thấy người dùng với email này', 404));
     }
 
     // Trong thực tế, sẽ gửi email với token đặt lại mật khẩu
@@ -226,11 +189,10 @@ exports.forgotPassword = async (req, res, next) => {
 
     await user.save({ validateBeforeSave: false });
 
-    res.status(200).json({
-      success: true,
-      message: 'Token đặt lại mật khẩu đã được gửi đến email',
-      resetToken // Trong thực tế không nên trả về token này
-    });
+    res.status(200).json(ApiResponse.success(
+      { resetToken }, // Trong thực tế không nên trả về token này
+      'Token đặt lại mật khẩu đã được gửi đến email'
+    ));
   } catch (error) {
     next(error);
   }
@@ -248,17 +210,171 @@ exports.resetPassword = async (req, res, next) => {
     const { password } = req.body;
 
     if (!resetToken || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Vui lòng cung cấp token và mật khẩu mới'
-      });
+      return next(new ApiError('Vui lòng cung cấp token và mật khẩu mới', 400));
     }
 
     // Demo code - trong thực tế sẽ xác thực token và cập nhật mật khẩu
-    res.status(200).json({
-      success: true,
-      message: 'Mật khẩu đã được đặt lại thành công'
+    // Băm token để so sánh với token đã lưu trong DB
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
+    
+    // Tìm user với token hợp lệ và chưa hết hạn
+    const user = await User.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: Date.now() }
     });
+    
+    // Nếu token không hợp lệ hoặc đã hết hạn
+    if (!user) {
+      return next(new ApiError('Token không hợp lệ hoặc đã hết hạn', 400));
+    }
+    
+    // Đặt mật khẩu mới và xóa thông tin reset token
+    user.password = password;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    
+    await user.save();
+
+    // Tự động đăng nhập người dùng sau khi đặt lại mật khẩu
+    sendToken(user, 200, res);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Đổi mật khẩu
+ * @route   PUT /api/users/change-password
+ * @access  Private
+ */
+exports.changePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return next(new ApiError('Vui lòng cung cấp mật khẩu hiện tại và mật khẩu mới', 400));
+    }
+
+    // Lấy user hiện tại với password
+    const user = await User.findById(req.user.id).select('+password');
+
+    // Kiểm tra xem mật khẩu hiện tại có đúng không
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return next(new ApiError('Mật khẩu hiện tại không chính xác', 401));
+    }
+
+    // Cập nhật mật khẩu
+    user.password = newPassword;
+    await user.save();
+
+    sendToken(user, 200, res);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Lấy danh sách người đọc bài
+ * @route   GET /api/users/readers
+ * @access  Public
+ */
+exports.getReaders = async (req, res, next) => {
+  try {
+    const readers = await User.find({ role: 'reader' })
+      .select('name email bio avatar ratings availability');
+
+    res.status(200).json(ApiResponse.success({ readers, count: readers.length }, 'Lấy danh sách người đọc bài thành công'));
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    ADMIN - Lấy danh sách tất cả người dùng
+ * @route   GET /api/users/admin/users
+ * @access  Admin
+ */
+exports.getAllUsers = async (req, res, next) => {
+  try {
+    const { page = 1, limit = 10, role } = req.query;
+    const skip = (page - 1) * limit;
+
+    // Tạo filter
+    const filter = {};
+    if (role) filter.role = role;
+
+    const totalUsers = await User.countDocuments(filter);
+    const users = await User.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    res.status(200).json(
+      ApiResponse.pagination(
+        users,
+        parseInt(page),
+        parseInt(limit),
+        totalUsers,
+        'Lấy danh sách người dùng thành công'
+      )
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    ADMIN - Cập nhật thông tin người dùng
+ * @route   PUT /api/users/admin/:id
+ * @access  Admin
+ */
+exports.updateUser = async (req, res, next) => {
+  try {
+    const fieldsToUpdate = {};
+    
+    // Các trường được phép cập nhật bởi admin
+    if (req.body.name !== undefined) fieldsToUpdate.name = req.body.name;
+    if (req.body.email !== undefined) fieldsToUpdate.email = req.body.email;
+    if (req.body.role !== undefined) fieldsToUpdate.role = req.body.role;
+    if (req.body.subscription !== undefined) fieldsToUpdate.subscription = req.body.subscription;
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      fieldsToUpdate,
+      {
+        new: true,
+        runValidators: true
+      }
+    );
+
+    if (!user) {
+      return next(new ApiError('Không tìm thấy người dùng', 404));
+    }
+
+    res.status(200).json(ApiResponse.success({ user }, 'Cập nhật thông tin người dùng thành công'));
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    ADMIN - Xóa người dùng
+ * @route   DELETE /api/users/admin/:id
+ * @access  Admin
+ */
+exports.deleteUser = async (req, res, next) => {
+  try {
+    const user = await User.findByIdAndDelete(req.params.id);
+
+    if (!user) {
+      return next(new ApiError('Không tìm thấy người dùng', 404));
+    }
+
+    res.status(200).json(ApiResponse.success(null, 'Xóa người dùng thành công'));
   } catch (error) {
     next(error);
   }

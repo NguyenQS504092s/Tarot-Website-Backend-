@@ -3,6 +3,21 @@
  */
 class ApiResponse {
   /**
+   * Constructor cho ApiResponse
+   * @param {Object} data - Dữ liệu trả về
+   * @param {String} message - Thông báo phản hồi
+   * @param {Number} statusCode - Mã trạng thái HTTP
+   * @returns {Object} - Đối tượng phản hồi API
+   */
+  constructor(data, message = 'Thao tác thành công', statusCode = 200) {
+    this.success = true;
+    this.message = message;
+    this.code = statusCode;
+    this.data = data;
+    return this;
+  }
+
+  /**
    * Tạo phản hồi thành công
    * @param {Object} data - Dữ liệu trả về
    * @param {String} message - Thông báo phản hồi

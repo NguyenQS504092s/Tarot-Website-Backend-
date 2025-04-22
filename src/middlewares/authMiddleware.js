@@ -1,5 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/userModel');
+const ApiError = require('../utils/apiError');
+const ApiResponse = require('../utils/apiResponse');
 
 /**
  * Middleware bảo vệ các routes yêu cầu đăng nhập
@@ -18,10 +20,9 @@ exports.protect = async (req, res, next) => {
 
     // Nếu không có token
     if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: 'Bạn cần đăng nhập để truy cập tài nguyên này'
-      });
+      return res.status(401).json(
+        ApiResponse.error('Bạn cần đăng nhập để truy cập tài nguyên này', 401)
+      );
     }
 
     // Xác thực token
@@ -30,10 +31,9 @@ exports.protect = async (req, res, next) => {
     // Tìm người dùng dựa trên ID từ token
     const currentUser = await User.findById(decoded.id);
     if (!currentUser) {
-      return res.status(401).json({
-        success: false,
-        message: 'Người dùng không còn tồn tại'
-      });
+      return res.status(401).json(
+        ApiResponse.error('Người dùng không còn tồn tại', 401)
+      );
     }
 
     // Gắn thông tin người dùng vào request
@@ -41,21 +41,18 @@ exports.protect = async (req, res, next) => {
     next();
   } catch (error) {
     if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Token không hợp lệ'
-      });
+      return res.status(401).json(
+        ApiResponse.error('Token không hợp lệ', 401)
+      );
     } else if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Token đã hết hạn, vui lòng đăng nhập lại'
-      });
+      return res.status(401).json(
+        ApiResponse.error('Token đã hết hạn, vui lòng đăng nhập lại', 401)
+      );
     }
     
-    return res.status(500).json({
-      success: false,
-      message: 'Lỗi xác thực: ' + error.message
-    });
+    return res.status(500).json(
+      ApiResponse.error('Lỗi xác thực: ' + error.message, 500)
+    );
   }
 };
 
@@ -67,18 +64,16 @@ exports.restrictTo = (...roles) => {
   return (req, res, next) => {
     // Middleware protect phải được gọi trước để req.user có giá trị
     if (!req.user) {
-      return res.status(500).json({
-        success: false,
-        message: 'Lỗi xác thực người dùng'
-      });
+      return res.status(500).json(
+        ApiResponse.error('Lỗi xác thực người dùng', 500)
+      );
     }
 
     // Kiểm tra vai trò
     if (!roles.includes(req.user.role)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Bạn không có quyền thực hiện thao tác này'
-      });
+      return res.status(403).json(
+        ApiResponse.error('Bạn không có quyền thực hiện thao tác này', 403)
+      );
     }
 
     next();

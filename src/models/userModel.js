@@ -37,7 +37,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['user', 'reader', 'admin'],
+      enum: ['user', 'premium_user', 'reader', 'admin'],
       default: 'user'
     },
     subscription: {
@@ -60,6 +60,9 @@ const userSchema = new mongoose.Schema(
         default: Date.now
       }
     },
+    stripeCustomerId: {
+      type: String
+    },
     passwordResetToken: String,
     passwordResetExpires: Date
   }, 
@@ -78,17 +81,26 @@ userSchema.pre('save', async function(next) {
   next();
 });
 
-// Method: Kiểm tra mật khẩu có khớp không
-userSchema.methods.correctPassword = async function(candidatePassword) {
+// Method: So sánh mật khẩu nhập vào với mật khẩu đã hash
+userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Method: Tạo JWT token
+// Method: Tạo JWT token - Phương thức cũ
 userSchema.methods.generateAuthToken = function() {
   return jwt.sign(
     { id: this._id, role: this.role },
-    config.jwtSecret,
-    { expiresIn: config.jwtExpiresIn }
+    process.env.JWT_SECRET || config.jwtSecret,
+    { expiresIn: process.env.JWT_EXPIRES_IN || config.jwtExpiresIn }
+  );
+};
+
+// Method: Tạo JWT token (để tương thích với userController)
+userSchema.methods.getSignedJwtToken = function() {
+  return jwt.sign(
+    { id: this._id, role: this.role },
+    process.env.JWT_SECRET || config.jwtSecret,
+    { expiresIn: process.env.JWT_EXPIRES_IN || config.jwtExpiresIn }
   );
 };
 
@@ -96,8 +108,17 @@ userSchema.methods.generateAuthToken = function() {
 userSchema.methods.generateRefreshToken = function() {
   return jwt.sign(
     { id: this._id },
-    config.jwtSecret,
-    { expiresIn: config.jwtRefreshExpiresIn }
+    process.env.JWT_SECRET || config.jwtSecret,
+    { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || config.jwtRefreshExpiresIn }
+  );
+};
+
+// Method: Tạo refresh token (để tương thích với userController)
+userSchema.methods.getRefreshToken = function() {
+  return jwt.sign(
+    { id: this._id },
+    process.env.JWT_SECRET || config.jwtSecret,
+    { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || config.jwtRefreshExpiresIn }
   );
 };
 
@@ -114,9 +135,16 @@ userSchema.methods.checkAndResetDailyReadings = function() {
   ) {
     this.dailyReadings.count = 0;
     this.dailyReadings.lastReset = now;
+    this.save();
   }
   
-  return this.dailyReadings.count < config.freeReadingsPerDay;
+  // Người dùng premium không bị giới hạn số lần đọc
+  if (this.role === 'premium_user' || this.role === 'admin' || this.role === 'reader') {
+    return true;
+  }
+  
+  const maxFreeReadings = process.env.FREE_READINGS_PER_DAY || config.freeReadingsPerDay || 3;
+  return this.dailyReadings.count < maxFreeReadings;
 };
 
 // Method: Tăng số lần đọc bài trong ngày

@@ -1,4 +1,6 @@
 const Card = require('../models/cardModel');
+const ApiResponse = require('../utils/apiResponse');
+const ApiError = require('../utils/apiError');
 
 /**
  * @desc    Lấy danh sách tất cả các lá bài
@@ -17,11 +19,10 @@ exports.getAllCards = async (req, res, next) => {
     
     const cards = await Card.find(filter);
     
-    res.status(200).json({
-      success: true,
-      count: cards.length,
-      data: cards
-    });
+    res.status(200).json(ApiResponse.success(
+      cards, 
+      'Lấy danh sách lá bài thành công'
+    ));
   } catch (error) {
     next(error);
   }
@@ -37,16 +38,13 @@ exports.getCard = async (req, res, next) => {
     const card = await Card.findById(req.params.id);
     
     if (!card) {
-      return res.status(404).json({
-        success: false,
-        message: 'Không tìm thấy lá bài'
-      });
+      return next(new ApiError('Không tìm thấy lá bài', 404));
     }
     
-    res.status(200).json({
-      success: true,
-      data: card
-    });
+    res.status(200).json(ApiResponse.success(
+      card,
+      'Lấy thông tin lá bài thành công'
+    ));
   } catch (error) {
     next(error);
   }
@@ -62,11 +60,10 @@ exports.getCardsByDeck = async (req, res, next) => {
     const { deckName } = req.params;
     const cards = await Card.find({ deck: deckName });
     
-    res.status(200).json({
-      success: true,
-      count: cards.length,
-      data: cards
-    });
+    res.status(200).json(ApiResponse.success(
+      cards,
+      `Lấy danh sách lá bài từ bộ ${deckName} thành công`
+    ));
   } catch (error) {
     next(error);
   }
@@ -82,11 +79,10 @@ exports.getCardsByType = async (req, res, next) => {
     const { cardType } = req.params;
     const cards = await Card.find({ type: cardType });
     
-    res.status(200).json({
-      success: true,
-      count: cards.length,
-      data: cards
-    });
+    res.status(200).json(ApiResponse.success(
+      cards,
+      `Lấy danh sách lá bài loại ${cardType} thành công`
+    ));
   } catch (error) {
     next(error);
   }
@@ -101,16 +97,14 @@ exports.createCard = async (req, res, next) => {
   try {
     const newCard = await Card.create(req.body);
     
-    res.status(201).json({
-      success: true,
-      data: newCard
-    });
+    res.status(201).json(ApiResponse.success(
+      newCard,
+      'Tạo lá bài mới thành công',
+      201
+    ));
   } catch (error) {
     if (error.code === 11000) {
-      return res.status(400).json({
-        success: false,
-        message: 'Lá bài với tên này đã tồn tại'
-      });
+      return next(new ApiError('Lá bài với tên này đã tồn tại', 400));
     }
     next(error);
   }
@@ -130,16 +124,13 @@ exports.updateCard = async (req, res, next) => {
     );
     
     if (!card) {
-      return res.status(404).json({
-        success: false,
-        message: 'Không tìm thấy lá bài'
-      });
+      return next(new ApiError('Không tìm thấy lá bài', 404));
     }
     
-    res.status(200).json({
-      success: true,
-      data: card
-    });
+    res.status(200).json(ApiResponse.success(
+      card,
+      'Cập nhật lá bài thành công'
+    ));
   } catch (error) {
     next(error);
   }
@@ -155,16 +146,13 @@ exports.deleteCard = async (req, res, next) => {
     const card = await Card.findByIdAndDelete(req.params.id);
     
     if (!card) {
-      return res.status(404).json({
-        success: false,
-        message: 'Không tìm thấy lá bài'
-      });
+      return next(new ApiError('Không tìm thấy lá bài', 404));
     }
     
-    res.status(200).json({
-      success: true,
-      message: 'Lá bài đã được xóa'
-    });
+    res.status(200).json(ApiResponse.success(
+      null,
+      'Lá bài đã được xóa'
+    ));
   } catch (error) {
     next(error);
   }

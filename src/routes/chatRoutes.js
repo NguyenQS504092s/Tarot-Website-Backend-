@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const chatController = require('../controllers/chatController');
-const { protect, authorize } = require('../middlewares/authMiddleware');
+const authMiddleware = require('../middlewares/authMiddleware');
 
 // Tất cả routes cần đăng nhập
-router.use(protect);
+router.use(authMiddleware.protect);
 
 // Lấy danh sách các cuộc trò chuyện của người dùng
 router.get('/', chatController.getUserChats);
@@ -21,7 +21,7 @@ router.post('/:id/messages', chatController.sendMessage);
 // Đánh dấu tin nhắn là đã đọc
 router.put('/:id/read', chatController.markChatAsRead);
 
-// Cập nhật trạng thái cuộc trò chuyện
+// Cập nhật trạng thái cuộc trò chuyện (chỉ reader/admin có thể thay đổi trạng thái)
 router.put('/:id', chatController.updateChatStatus);
 
 // Lên lịch hẹn trò chuyện mới
