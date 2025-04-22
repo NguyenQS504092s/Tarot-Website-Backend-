@@ -58,10 +58,10 @@ const errorMiddleware = (err, req, res, next) => {
       // Send response based on the potentially transformed error
       // If it's still not an operational error after specific checks, send generic message
       if (error.isOperational) {
-         res.status(error.statusCode).json({
-           status: error.status,
-           message: error.message
-         });
+        res.status(error.statusCode).json({
+          status: error.status,
+          message: error.message
+        });
       } else {
         // Send generic message for truly unknown errors
         res.status(500).json({

@@ -2,28 +2,28 @@ const express = require('express');
 const router = express.Router();
 const paymentController = require('../controllers/paymentController');
 const authMiddleware = require('../middlewares/authMiddleware');
+const { trackPerformance } = require('../middlewares/performanceMiddleware');
 
-// Special route for Stripe webhook - doesn't use auth middleware
-router.post('/webhook', paymentController.stripeWebhook);
+// Routes công khai
+router.get('/plans', trackPerformance('getAllPlans'), paymentController.getAllPlans);
+router.get('/plans/:id', trackPerformance('getPlanById'), paymentController.getPlanById);
 
-// Public routes
-router.get('/plans', paymentController.getAllPlans);
-router.get('/plans/:id', paymentController.getPlanById);
+// Stripe webhook - lưu ý cần middleware đặc biệt raw body từ app.js
+router.post('/webhook', paymentController.handleStripeWebhook);
 
-// Routes that require authentication
+// Routes bảo vệ - yêu cầu đăng nhập
 router.use(authMiddleware.protect);
 
-// Payment routes for authenticated users
-router.post('/create-checkout-session', paymentController.createCheckoutSession);
-router.get('/subscription', paymentController.getCurrentSubscription);
-router.delete('/subscription', paymentController.cancelSubscription);
-router.get('/history', paymentController.getPaymentHistory);
+router.post('/create-checkout-session', trackPerformance('createCheckoutSession'), paymentController.createCheckoutSession);
+router.get('/subscription', trackPerformance('getUserSubscription'), paymentController.getUserSubscription);
+router.post('/cancel-subscription', trackPerformance('cancelUserSubscription'), paymentController.cancelUserSubscription);
+router.get('/payment-history', trackPerformance('getPaymentHistory'), paymentController.getPaymentHistory);
 
-// Admin routes
-router.use(authMiddleware.restrictTo('admin'));
-
-// Create and update subscription plans
-router.post('/plans', paymentController.createPlan);
-router.put('/plans/:id', paymentController.updatePlan);
+// Routes cho admin
+router.use('/admin', authMiddleware.protect, authMiddleware.restrictTo('admin'));
+router.post('/admin/plans', trackPerformance('createSubscriptionPlan'), paymentController.createSubscriptionPlan);
+router.put('/admin/plans/:id', trackPerformance('updateSubscriptionPlan'), paymentController.updateSubscriptionPlan);
+router.delete('/admin/plans/:id', trackPerformance('deleteSubscriptionPlan'), paymentController.deleteSubscriptionPlan);
+router.get('/admin/payments', trackPerformance('getAllPayments'), paymentController.getAllPayments);
 
 module.exports = router;
