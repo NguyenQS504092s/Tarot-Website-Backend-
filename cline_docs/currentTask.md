@@ -12,4 +12,60 @@
 - [x] Update `techStack.md` based on reviewed files. (Implicitly done during review)
 - [x] Update `codebaseSummary.md` with initial findings and applied fixes.
 - [x] Perform detailed review and apply fixes across core directories (config, middlewares, utils, models, routes, controllers, services).
+- [x] Implement input validation using `express-validator` (initial setup and integration).
+- [x] Implement remaining input validations marked with `TODO` (user, reading, astrology, card, chat routes).
+- [x] Fix server startup errors related to validation implementation.
+- [x] Resolve Mongoose duplicate index warnings.
+- [x] Define initial goals, features, and criteria in `projectRoadmap.md`.
+- [x] Review and refine Role-Based Access Control (RBAC) implementation.
+- [x] Implement Admin CRUD service logic for Tarot Cards (Module 2).
+- [x] Implement service logic for `getCardsByType` (Module 2).
+- [x] Implement service logic for creating a new reading (`createReading` in `readingService.js`, Module 3).
+- [x] Refactor and ensure service logic for adding interpretation (`addInterpretation` in `readingService.js`, Module 3).
+- [x] Refactor and ensure service logic for adding feedback (`addFeedback` in `readingService.js`, Module 3).
+- [x] Define and implement API for getting available spread types (`getAllSpreads`, Module 3).
+- [x] Review and refine Role-Based Access Control (RBAC) implementation for 'admin' role.
+- [x] Implement Admin CRUD service logic for Readings (Module 3 - `getAllReadings`, `deleteReading`, `updateReading`).
+- [x] Implement `updateReadingValidator` in `src/validators/readingValidators.js` (Module 3).
+- [x] Apply `updateReadingValidator` to the admin update route in `src/routes/readingRoutes.js`.
+- [x] Review and confirm Role-Based Access Control (RBAC) implementation (`restrictTo`).
+- [x] Add `refreshToken` field to `userModel.js` (Module 1).
+- [x] Update `login` controller to generate, save, and return refresh token (Module 1).
+- [x] Update `refreshToken` controller logic to verify against stored token (Module 1).
+- [x] Update `resetPassword` and `updatePassword` controllers to handle refresh token generation (Module 1).
+- [x] Add `logout` route to `userRoutes.js` (Module 1).
+- [x] Implement `logout` controller logic to clear refresh token (Module 1).
+- [x] Review and confirm Admin CRUD functionality for Cards (Module 2).
+- [x] Review and confirm logic for getting daily horoscope (`/astrology/:sign`, Module 4).
+- [x] Create `astrologyService.js` and implement `getZodiacCompatibility` (Module 4).
+- [x] Update `astrologyController.js` to use `getZodiacCompatibility` service (Module 4).
+- [x] Implement `getTarotZodiacRelation` in `astrologyService.js` (Module 4).
+- [x] Update `astrologyController.js` to use `getTarotZodiacRelation` service (Module 4).
+- [x] Add `DELETE /api/astrology/:id` route for Horoscopes (Module 4).
+- [x] Add `deleteDailyHoroscope` controller function (Module 4).
+- [x] Implement `createDailyHoroscope`, `updateDailyHoroscope`, `deleteDailyHoroscope` in `astrologyService.js` (Module 4).
+- [x] Update `astrologyController.js` to use Horoscope CRUD service functions (Module 4).
+- [x] Add `DELETE /api/astrology/signs/:id` route for Zodiacs (Module 4).
+- [x] Add `deleteZodiacSign` controller function (Module 4).
+- [x] Implement `createZodiacSign`, `updateZodiacSign`, `deleteZodiacSign` in `astrologyService.js` (Module 4).
+- [x] Update `astrologyController.js` to use Zodiac CRUD service functions (Module 4).
+- [x] Create `paymentService.js` and implement SubscriptionPlan CRUD functions (Module 5).
+- [x] Update `paymentController.js` to use SubscriptionPlan CRUD service functions (Module 5).
+- [x] Refactor Stripe webhook logic into `paymentService.js` with idempotency checks (Module 5).
+- [x] Update `paymentController.js` webhook handler to call the service (Module 5).
+- [x] Create `messageModel.js` (Module 6).
+- [x] Create `chatService.js` and implement `createChat` function (Module 6).
+- [x] Update `chatController.js` to use `createChat` service function (Module 6).
+- [x] Implement `sendMessage` function in `chatService.js` (Module 6).
+- [x] Update `chatController.js` to use `sendMessage` service function (Module 6).
+- [x] Add route `GET /chats/:id/messages` (Module 6).
+- [x] Add controller `getChatMessages` (Module 6).
+- [x] Implement `getChatMessages` function in `chatService.js` (Module 6).
+- [x] Update `chatController.js` to use `getChatMessages` service function (Module 6).
+- [x] Implement `markChatAsRead` function in `chatService.js` (Module 6).
+- [x] Update `chatController.js` to use `markChatAsRead` service function (Module 6).
+- [x] Implement `scheduleChat` function in `chatService.js` (Module 6).
+- [x] Update `chatController.js` to use `scheduleChat` service function (Module 6).
+- [x] Implement `getUpcomingSchedules` function in `chatService.js` (Module 6).
+- [x] Update `chatController.js` to use `getUpcomingSchedules` service function (Module 6).
 - [ ] Await user feedback or next task.

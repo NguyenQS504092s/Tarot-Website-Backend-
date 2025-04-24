@@ -64,8 +64,12 @@ const userSchema = new mongoose.Schema(
       type: String
     },
     passwordResetToken: String,
-    passwordResetExpires: Date
-  }, 
+    passwordResetExpires: Date,
+    refreshToken: {
+      type: String,
+      select: false // Không trả về refresh token trong các query thông thường
+    }
+  },
   {
     timestamps: true
   }

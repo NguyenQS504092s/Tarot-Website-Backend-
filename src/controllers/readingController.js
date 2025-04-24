@@ -12,41 +12,21 @@ const ApiError = require('../utils/apiError');
  */
 exports.createReading = async (req, res, next) => {
   try {
-    const { spread, question, cards } = req.body;
-    
-    if (!spread || !cards || !Array.isArray(cards)) {
-      return next(new ApiError('Vui lòng cung cấp đầy đủ thông tin cần thiết', 400));
-    }
+    // Lấy thông tin từ body và user đã xác thực
+    const { spreadType, question, deckName, allowReversed } = req.body;
+    const userId = req.user._id;
 
-    // Kiểm tra xem tất cả các lá bài có tồn tại không
-    for (const card of cards) {
-      const cardExists = await Card.findById(card.cardId);
-      if (!cardExists) {
-        return next(new ApiError(`Không tìm thấy lá bài với ID ${card.cardId}`, 404));
-      }
-    }
+    // Gọi service để tạo reading ngẫu nhiên
+    // spreadType được validate bởi createReadingValidator
+    const newReading = await readingService.createReading(
+      userId,
+      spreadType,
+      question, // question là optional trong validator và service
+      deckName, // service có giá trị mặc định
+      allowReversed // service có giá trị mặc định
+    );
 
-    // Tạo phiên đọc bài mới
-    const newReading = await Reading.create({
-      userId: req.user._id,
-      spread,
-      question,
-      userId: req.user._id,
-      spread,
-      question,
-      cards,
-    });
-
-    // Populate thông tin chi tiết của lá bài trực tiếp
-    await newReading.populate({
-      path: 'cards.cardId',
-      select: 'name imageUrl uprightMeaning reversedMeaning'
-    });
-    await newReading.populate({
-      path: 'userId',
-      select: 'name email'
-    });
-
+    // Service đã populate thông tin cần thiết
 
     res.status(201).json(ApiResponse.success(newReading, 'Tạo phiên đọc bài thành công', 201));
   } catch (error) {
@@ -181,26 +161,21 @@ exports.getAutoInterpretation = async (req, res, next) => {
 exports.addFeedbackToReading = async (req, res, next) => {
   try {
     const { rating, comment } = req.body;
-    
-    if (!rating || rating < 1 || rating > 5) {
-      return next(new ApiError('Vui lòng cung cấp đánh giá từ 1 đến 5 sao', 400));
-    }
-    
-    const reading = await Reading.findById(req.params.id);
-    
-    if (!reading) {
-      return next(new ApiError('Không tìm thấy phiên đọc bài', 404));
-    }
-    
-    // Chỉ cho phép chủ sở hữu thêm phản hồi
-    if (reading.userId.toString() !== req.user._id.toString()) {
-      return next(new ApiError('Bạn không có quyền thêm phản hồi cho phiên đọc bài này', 403));
-    }
-    
-    reading.feedback = { rating, comment };
-    await reading.save();
-    
-    res.status(200).json(ApiResponse.success(reading, 'Thêm phản hồi thành công'));
+    const readingId = req.params.id;
+    const userId = req.user._id; // Lấy ID của user từ user đã xác thực
+
+    // Gọi service để thêm feedback
+    // Validation cho rating và comment đã được thực hiện bởi addFeedbackValidator
+    const updatedReading = await readingService.addFeedback(
+      readingId,
+      userId,
+      rating,
+      comment
+    );
+
+    // Service đã xử lý lỗi không tìm thấy hoặc không có quyền
+
+    res.status(200).json(ApiResponse.success(updatedReading, 'Thêm phản hồi thành công'));
   } catch (error) {
     next(error);
   }
@@ -238,22 +213,19 @@ exports.getPendingReadings = async (req, res, next) => {
 exports.addInterpretation = async (req, res, next) => {
   try {
     const { interpretation } = req.body;
-    
-    if (!interpretation) {
-      return next(new ApiError('Vui lòng cung cấp nội dung diễn giải', 400));
-    }
-    
-    const reading = await Reading.findById(req.params.id);
-    
-    if (!reading) {
-      return next(new ApiError('Không tìm thấy phiên đọc bài', 404));
-    }
-    
-    reading.interpretation = interpretation;
-    reading.readerId = req.user._id;
-    await reading.save();
-    
-    res.status(200).json(ApiResponse.success(reading, 'Thêm diễn giải thành công'));
+    const readingId = req.params.id;
+    const readerId = req.user._id; // Lấy ID của reader từ user đã xác thực
+
+    // Gọi service để thêm diễn giải
+    const updatedReading = await readingService.addInterpretation(
+      readingId,
+      readerId,
+      interpretation
+    );
+
+    // Service đã xử lý lỗi không tìm thấy hoặc đã có diễn giải
+
+    res.status(200).json(ApiResponse.success(updatedCard, 'Thêm diễn giải thành công')); // Sửa biến trả về
   } catch (error) {
     next(error);
   }
@@ -267,20 +239,16 @@ exports.addInterpretation = async (req, res, next) => {
 exports.getAllReadings = async (req, res, next) => {
   try {
     const { page = 1, limit = 10 } = req.query;
-    const skip = (page - 1) * limit;
     
-    const totalReadings = await Reading.countDocuments();
-    const readings = await Reading.find()
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(Number(limit));
+    // Gọi service để lấy tất cả readings
+    const result = await readingService.getAllReadings(page, limit);
     
     res.status(200).json(ApiResponse.pagination(
-      readings,
-      parseInt(page),
-      parseInt(limit),
-      totalReadings,
-      'Lấy danh sách phiên đọc bài thành công'
+      result.readings,
+      result.pagination.page,
+      result.pagination.limit,
+      result.pagination.total,
+      'Lấy danh sách tất cả phiên đọc bài thành công'
     ));
   } catch (error) {
     next(error);
@@ -294,15 +262,16 @@ exports.getAllReadings = async (req, res, next) => {
  */
 exports.deleteReading = async (req, res, next) => {
   try {
-    const reading = await Reading.findByIdAndDelete(req.params.id);
+    const readingId = req.params.id; // ID đã được validate bởi getReadingByIdValidator
     
-    if (!reading) {
-      return next(new ApiError('Không tìm thấy phiên đọc bài', 404));
-    }
+    // Gọi service để xóa reading
+    const result = await readingService.deleteReading(readingId);
+    
+    // Service đã xử lý lỗi không tìm thấy
     
     res.status(200).json(ApiResponse.success(
-      null, 
-      'Phiên đọc bài đã được xóa'
+      result, // Trả về thông báo từ service
+      'Phiên đọc bài đã được xóa thành công'
     ));
   } catch (error) {
     next(error);
@@ -316,28 +285,29 @@ exports.deleteReading = async (req, res, next) => {
  */
 exports.getAllSpreads = async (req, res, next) => {
   try {
-    // Trong một API thực tế, các cách trải bài sẽ được lưu trong database
-    // Nhưng ở đây chúng ta sẽ trả về danh sách cứng
-    const spreads = [
+    // Lấy danh sách các kiểu trải bài được hỗ trợ từ một nguồn đáng tin cậy
+    // (Hiện tại là từ logic trong readingService, sau này có thể từ DB)
+    const supportedSpreads = [
       {
         name: "Celtic Cross",
-        description: "Một cách trải bài phổ biến cho các câu hỏi phức tạp, bao gồm 10 lá bài",
-        positions: 10
+        description: "Một cách trải bài phổ biến cho các câu hỏi phức tạp.",
+        cardCount: 10 // Số lượng lá bài
       },
       {
         name: "Ba Lá Bài",
-        description: "Cách trải bài đơn giản với 3 lá: quá khứ, hiện tại và tương lai",
-        positions: 3
+        description: "Cách trải bài đơn giản: quá khứ, hiện tại, tương lai.",
+        cardCount: 3
       },
       {
         name: "Năm Lá Bài",
-        description: "Cách trải bài toàn diện cho tình hình hiện tại và các hướng phát triển",
-        positions: 5
+        description: "Cách trải bài cho tình hình hiện tại và các hướng phát triển.",
+        cardCount: 5
       }
+      // Thêm các kiểu trải bài khác nếu có
     ];
     
     res.status(200).json(ApiResponse.success(
-      spreads,
+      supportedSpreads,
       'Lấy danh sách cách trải bài thành công'
     ));
   } catch (error) {
@@ -354,6 +324,32 @@ exports.createSpread = async (req, res, next) => {
   try {
     // Giả định: trong triển khai thực tế sẽ có model Spread riêng
     return next(new ApiError('Chức năng này chưa được triển khai', 501));
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Cập nhật phiên đọc bài (cho admin)
+ * @route   PUT /api/readings/admin/:id
+ * @access  Admin
+ */
+exports.updateReading = async (req, res, next) => {
+  try {
+    const readingId = req.params.id; // ID đã được validate bởi getReadingByIdValidator
+    const updateData = req.body; // Dữ liệu cần cập nhật
+
+    // TODO: Thêm validation cho updateData (updateReadingValidator)
+
+    // Gọi service để cập nhật reading
+    const updatedReading = await readingService.updateReading(readingId, updateData);
+
+    // Service sẽ xử lý lỗi không tìm thấy
+
+    res.status(200).json(ApiResponse.success(
+      updatedReading,
+      'Phiên đọc bài đã được cập nhật thành công'
+    ));
   } catch (error) {
     next(error);
   }

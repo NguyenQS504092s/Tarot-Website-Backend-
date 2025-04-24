@@ -42,6 +42,43 @@ exports.getCardsByDeck = async (deckName) => {
 };
 
 /**
+ * Lấy các lá bài theo loại (Major Arcana, Minor Arcana, Suit)
+ * @param {String} cardType Loại bài cần lấy
+ * @returns {Promise<Array>} Danh sách các lá bài
+ */
+exports.getCardsByType = async (cardType) => {
+  try {
+    const query = {};
+    const typeLower = cardType.toLowerCase();
+
+    // Xác định query dựa trên loại bài
+    if (typeLower === 'major arcana' || typeLower === 'minor arcana') {
+      query.type = { $regex: new RegExp(`^${cardType}$`, 'i') };
+    } else {
+      // Giả định các loại khác là suit (Wands, Cups, Swords, Pentacles)
+      // Cần chuẩn hóa tên suit nếu cần (ví dụ: 'Gậy' thay vì 'Wands')
+      // Tạm thời dùng regex không phân biệt hoa thường
+      query.suit = { $regex: new RegExp(`^${cardType}$`, 'i') };
+      query.type = 'Minor Arcana'; // Chỉ tìm trong Minor Arcana nếu là suit
+    }
+
+    const cards = await Card.find(query);
+
+    if (cards.length === 0) {
+      throw new ApiError(`Không tìm thấy lá bài nào thuộc loại/suit "${cardType}"`, 404);
+    }
+
+    return cards;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(`Lỗi khi lấy lá bài theo loại: ${error.message}`, 500);
+  }
+};
+
+
+/**
  * Xáo trộn các lá bài
  * @param {Array} cards Mảng các lá bài
  * @returns {Array} Mảng lá bài đã được xáo trộn
@@ -144,5 +181,89 @@ exports.drawCardsForSpread = async (spreadName, deckName = 'Rider Waite Smith', 
       throw error;
     }
     throw new ApiError(`Lỗi khi rút bài cho trải bài: ${error.message}`, 500);
+  }
+};
+
+// --- Admin CRUD Operations ---
+
+/**
+ * Tạo một lá bài mới (Admin)
+ * @param {Object} cardData Dữ liệu lá bài từ request body
+ * @returns {Promise<Object>} Lá bài mới được tạo
+ */
+exports.createCard = async (cardData) => {
+  try {
+    // Kiểm tra xem tên lá bài đã tồn tại chưa (unique)
+    const existingCard = await Card.findOne({ name: cardData.name });
+    if (existingCard) {
+      throw new ApiError(`Lá bài với tên "${cardData.name}" đã tồn tại`, 400);
+    }
+    
+    // Tạo lá bài mới
+    const newCard = await Card.create(cardData);
+    return newCard;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    // Handle Mongoose validation errors specifically if needed
+    if (error.name === 'ValidationError') {
+        throw new ApiError(`Lỗi validation khi tạo lá bài: ${error.message}`, 400);
+    }
+    throw new ApiError(`Lỗi khi tạo lá bài: ${error.message}`, 500);
+  }
+};
+
+/**
+ * Cập nhật một lá bài (Admin)
+ * @param {String} cardId ID của lá bài cần cập nhật
+ * @param {Object} updateData Dữ liệu cập nhật từ request body
+ * @returns {Promise<Object>} Lá bài đã được cập nhật
+ */
+exports.updateCard = async (cardId, updateData) => {
+  try {
+    const card = await Card.findByIdAndUpdate(cardId, updateData, {
+      new: true, // Trả về document sau khi cập nhật
+      runValidators: true // Chạy validators của Mongoose khi cập nhật
+    });
+
+    if (!card) {
+      throw new ApiError(`Không tìm thấy lá bài với ID: ${cardId}`, 404);
+    }
+    
+    return card;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    if (error.name === 'ValidationError') {
+        throw new ApiError(`Lỗi validation khi cập nhật lá bài: ${error.message}`, 400);
+    }
+    // Handle potential duplicate key error if name is updated to an existing one
+    if (error.code === 11000 && error.keyPattern && error.keyPattern.name) {
+        throw new ApiError(`Tên lá bài "${updateData.name}" đã tồn tại`, 400);
+    }
+    throw new ApiError(`Lỗi khi cập nhật lá bài: ${error.message}`, 500);
+  }
+};
+
+/**
+ * Xóa một lá bài (Admin)
+ * @param {String} cardId ID của lá bài cần xóa
+ * @returns {Promise<void>}
+ */
+exports.deleteCard = async (cardId) => {
+  try {
+    const card = await Card.findByIdAndDelete(cardId);
+
+    if (!card) {
+      throw new ApiError(`Không tìm thấy lá bài với ID: ${cardId}`, 404);
+    }
+    // Không cần trả về gì khi xóa thành công
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(`Lỗi khi xóa lá bài: ${error.message}`, 500);
   }
 };

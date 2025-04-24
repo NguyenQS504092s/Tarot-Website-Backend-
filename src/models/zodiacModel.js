@@ -84,7 +84,7 @@ const ZodiacSchema = new mongoose.Schema(
  );
  
  // Add indexes for common lookups
- ZodiacSchema.index({ name: 1 });
- ZodiacSchema.index({ nameEn: 1 });
+ // ZodiacSchema.index({ name: 1 }); // Removed duplicate index (unique: true already creates one)
+ // ZodiacSchema.index({ nameEn: 1 }); // Removed duplicate index (unique: true already creates one)
  
  module.exports = mongoose.model('Zodiac', ZodiacSchema);

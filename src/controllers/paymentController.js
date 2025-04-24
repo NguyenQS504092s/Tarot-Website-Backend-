@@ -1,8 +1,10 @@
 const { SubscriptionPlan, Payment, UserSubscription } = require('../models/paymentModel');
+const { SubscriptionPlan, Payment, UserSubscription } = require('../models/paymentModel');
 const User = require('../models/userModel');
+const paymentService = require('../services/paymentService'); // Import the service
 const ApiError = require('../utils/apiError');
 const ApiResponse = require('../utils/apiResponse');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); // Keep stripe for checkout/webhook
 
 /**
  * @desc    Lấy danh sách tất cả các gói dịch vụ
@@ -46,45 +48,17 @@ exports.getPlanById = async (req, res, next) => {
  * @route   POST /api/payments/admin/plans
  * @access  Private (Admin)
  */
-exports.createSubscriptionPlan = async (req, res, next) => { // Renamed
+exports.createSubscriptionPlan = async (req, res, next) => {
   try {
-    const { name, description, price, currency, duration, durationUnit, features } = req.body;
+    // Data is validated by createSubscriptionPlanValidator
+    const planData = req.body;
 
-    // Tạo sản phẩm trong Stripe
-    const stripeProduct = await stripe.products.create({
-      name,
-      description,
-      metadata: {
-        duration,
-        durationUnit
-      }
-    });
+    // Call the service function
+    const newPlan = await paymentService.createSubscriptionPlan(planData);
 
-    // Tạo giá cho sản phẩm
-    const stripePrice = await stripe.prices.create({
-      product: stripeProduct.id,
-      unit_amount: Math.round(price * 100), // Convert to cents/smallest currency unit
-      currency: currency.toLowerCase(),
-      recurring: {
-        interval: durationUnit === 'month' ? 'month' : durationUnit === 'year' ? 'year' : 'day',
-        interval_count: duration
-      }
-    });
+    // Service handles Stripe interaction and DB creation
 
-    // Tạo gói dịch vụ trong database
-    const plan = await SubscriptionPlan.create({
-      name,
-      description,
-      price,
-      currency,
-      duration,
-      durationUnit,
-      features,
-      stripeProductId: stripeProduct.id,
-      stripePriceId: stripePrice.id
-    });
-
-    res.status(201).json(ApiResponse.success(plan, 'Tạo gói dịch vụ thành công', 201));
+    res.status(201).json(ApiResponse.success(newPlan, 'Tạo gói dịch vụ thành công', 201));
   } catch (error) {
     next(error);
   }
@@ -95,50 +69,17 @@ exports.createSubscriptionPlan = async (req, res, next) => { // Renamed
  * @route   PUT /api/payments/admin/plans/:id
  * @access  Private (Admin)
  */
-exports.updateSubscriptionPlan = async (req, res, next) => { // Renamed
+exports.updateSubscriptionPlan = async (req, res, next) => {
   try {
-    const { name, description, price, isActive, features } = req.body;
+    const planId = req.params.id; // ID is validated by updateSubscriptionPlanValidator
+    const updateData = req.body; // Data is validated by updateSubscriptionPlanValidator
 
-    const plan = await SubscriptionPlan.findById(req.params.id);
+    // Call the service function
+    const updatedPlan = await paymentService.updateSubscriptionPlan(planId, updateData);
 
-    if (!plan) {
-      return next(new ApiError('Không tìm thấy gói dịch vụ', 404));
-    }
+    // Service handles Stripe interaction, DB update, and 'not found' errors
 
-    // Cập nhật thông tin trong Stripe nếu cần
-    if (name || description) {
-      await stripe.products.update(plan.stripeProductId, {
-        name: name || plan.name,
-        description: description || plan.description,
-        active: isActive !== undefined ? isActive : plan.isActive
-      });
-    }
-
-    // Cập nhật thông tin gói dịch vụ
-    if (name) plan.name = name;
-    if (description) plan.description = description;
-    if (features) plan.features = features;
-    if (isActive !== undefined) plan.isActive = isActive;
-
-    // Nếu giá thay đổi, tạo một price mới trong Stripe và cập nhật trong DB
-    if (price && price !== plan.price) {
-      const stripePrice = await stripe.prices.create({
-        product: plan.stripeProductId,
-        unit_amount: Math.round(price * 100),
-        currency: plan.currency.toLowerCase(),
-        recurring: {
-          interval: plan.durationUnit === 'month' ? 'month' : plan.durationUnit === 'year' ? 'year' : 'day',
-          interval_count: plan.duration
-        }
-      });
-
-      plan.stripePriceId = stripePrice.id;
-      plan.price = price;
-    }
-
-    await plan.save();
-
-    res.status(200).json(ApiResponse.success(plan, 'Cập nhật gói dịch vụ thành công'));
+    res.status(200).json(ApiResponse.success(updatedPlan, 'Cập nhật gói dịch vụ thành công'));
   } catch (error) {
     next(error);
   }
@@ -213,223 +154,32 @@ exports.createCheckoutSession = async (req, res, next) => {
  * @route   POST /api/payments/webhook
  * @access  Public
  */
-exports.stripeWebhook = async (req, res) => {
-  let signature = req.headers['stripe-signature'];
-  let event;
+exports.stripeWebhook = async (req, res, next) => {
+  const signature = req.headers['stripe-signature'];
 
   try {
-    // Kiểm tra xem STRIPE_WEBHOOK_SECRET đã được cấu hình chưa
-    if (!process.env.STRIPE_WEBHOOK_SECRET) {
-      console.error('STRIPE_WEBHOOK_SECRET is not defined');
-      return res.status(500).send('Server không được cấu hình đúng');
-    }
+    // Gọi service để xử lý webhook, truyền signature và raw body
+    // Lưu ý: req.body ở đây phải là raw buffer, được cấu hình trong app.js
+    await paymentService.handleStripeWebhook(signature, req.body);
 
-    try {
-      event = stripe.webhooks.constructEvent(
-        req.body,
-        signature,
-        process.env.STRIPE_WEBHOOK_SECRET
-      );
-    } catch (err) {
-      console.error(`Webhook signature verification failed: ${err.message}`);
-      return res.status(400).send(`Webhook Error: ${err.message}`);
-    }
-
-    // Xử lý các sự kiện
-    switch (event.type) {
-      case 'checkout.session.completed':
-        try {
-          await handleCheckoutSessionCompleted(event.data.object);
-        } catch (error) {
-          console.error(`Error handling checkout.session.completed: ${error.message}`);
-          // Không return ở đây để tránh Stripe gửi lại sự kiện
-        }
-        break;
-      case 'invoice.paid':
-        try {
-          await handleInvoicePaid(event.data.object);
-        } catch (error) {
-          console.error(`Error handling invoice.paid: ${error.message}`);
-        }
-        break;
-      case 'customer.subscription.deleted':
-        try {
-          await handleSubscriptionDeleted(event.data.object);
-        } catch (error) {
-          console.error(`Error handling customer.subscription.deleted: ${error.message}`);
-        }
-        break;
-      default:
-        console.log(`Unhandled event type ${event.type}`);
-    }
-
-    // Trả về thành công cho Stripe để không gửi lại webhook
+    // Nếu service không throw lỗi (signature hợp lệ và xử lý xong hoặc lỗi nội bộ đã log)
     res.status(200).json({ received: true });
+
   } catch (error) {
-    console.error(`General webhook processing error: ${error.message}`);
-    // Trả về 200 để Stripe không gửi lại sự kiện
-    // Các lỗi được ghi log nhưng không trả về client
-    res.status(200).send('Webhook received');
+    // Bắt lỗi từ service (chủ yếu là lỗi signature hoặc lỗi cấu hình secret)
+    if (error instanceof ApiError) {
+      // Trả về lỗi cụ thể nếu là ApiError (ví dụ: 400 cho signature sai)
+      return res.status(error.statusCode).send(`Webhook Error: ${error.message}`);
+    } else {
+      // Lỗi không mong muốn khác
+      console.error(`Unexpected error in stripeWebhook controller: ${error.message}`);
+      return res.status(500).send('Internal Server Error');
+    }
+    // Không cần gọi next(error) vì đây là endpoint đặc biệt
   }
 };
 
-/**
- * @desc    Xử lý sự kiện checkout.session.completed từ Stripe
- * @private
- */
-async function handleCheckoutSessionCompleted(session) {
-  try {
-    const { planId, userId } = session.metadata;
-    
-    // Lấy thông tin gói dịch vụ
-    const plan = await SubscriptionPlan.findById(planId);
-    if (!plan) throw new Error('Không tìm thấy gói dịch vụ');
-
-    // Lấy thông tin subscription từ Stripe
-    const subscription = await stripe.subscriptions.retrieve(session.subscription);
-
-    // Tạo payment record
-    const payment = await Payment.create({
-      userId,
-      amount: plan.price,
-      currency: plan.currency,
-      status: 'completed',
-      paymentMethod: 'stripe',
-      subscriptionPlan: planId,
-      transactionId: session.payment_intent,
-      metadata: {
-        stripeSessionId: session.id,
-        stripeSubscriptionId: session.subscription
-      },
-      description: `Thanh toán cho gói ${plan.name}`
-    });
-
-    // Tính ngày kết thúc
-    const startDate = new Date();
-    const endDate = UserSubscription.calculateEndDate(plan, startDate);
-
-    // Kiểm tra xem người dùng đã có gói dịch vụ đang hoạt động chưa
-    const existingSubscription = await UserSubscription.findActiveSubscription(userId);
-    
-    if (existingSubscription) {
-      // Nếu đã có gói đang hoạt động, vô hiệu hóa gói cũ
-      existingSubscription.isActive = false;
-      existingSubscription.autoRenew = false;
-      await existingSubscription.save();
-    }
-
-    // Tạo subscription mới
-    await UserSubscription.create({
-      userId,
-      plan: planId,
-      startDate,
-      endDate,
-      isActive: true,
-      autoRenew: true,
-      stripeSubscriptionId: session.subscription,
-      payments: [payment._id]
-    });
-
-    // Cập nhật vai trò người dùng nếu cần
-    const user = await User.findById(userId);
-    if (user && user.role === 'user') {
-      user.role = 'premium_user';
-      await user.save();
-    }
-  } catch (error) {
-    console.error(`Error handling checkout.session.completed: ${error.message}`);
-    throw error;
-  }
-}
-
-/**
- * @desc    Xử lý sự kiện invoice.paid từ Stripe (cho thanh toán tự động)
- * @private
- */
-async function handleInvoicePaid(invoice) {
-  try {
-    // Tìm subscription id
-    const stripeSubscriptionId = invoice.subscription;
-    
-    // Tìm subscription trong database
-    const subscription = await UserSubscription.findOne({ 
-      stripeSubscriptionId,
-      isActive: true
-    });
-    
-    if (!subscription) return;
-    
-    // Tìm plan
-    const plan = await SubscriptionPlan.findById(subscription.plan);
-    if (!plan) return;
-
-    // Tạo payment record mới
-    const payment = await Payment.create({
-      userId: subscription.userId,
-      amount: invoice.amount_paid / 100, // Convert from cents
-      currency: invoice.currency.toUpperCase(),
-      status: 'completed',
-      paymentMethod: 'stripe',
-      subscriptionPlan: subscription.plan,
-      transactionId: invoice.payment_intent,
-      metadata: {
-        stripeInvoiceId: invoice.id,
-        stripeSubscriptionId
-      },
-      description: `Thanh toán tự động cho gói ${plan.name}`
-    });
-
-    // Cập nhật ngày kết thúc subscription
-    const newEndDate = UserSubscription.calculateEndDate(
-      plan,
-      subscription.endDate > new Date() ? subscription.endDate : new Date()
-    );
-    
-    subscription.endDate = newEndDate;
-    subscription.payments.push(payment._id);
-    await subscription.save();
-  } catch (error) {
-    console.error(`Error handling invoice.paid: ${error.message}`);
-    throw error;
-  }
-}
-
-/**
- * @desc    Xử lý sự kiện customer.subscription.deleted từ Stripe
- * @private
- */
-async function handleSubscriptionDeleted(stripeSubscription) {
-  try {
-    // Tìm subscription trong database
-    const subscription = await UserSubscription.findOne({ 
-      stripeSubscriptionId: stripeSubscription.id
-    });
-    
-    if (!subscription) return;
-    
-    // Đánh dấu subscription đã bị hủy
-    subscription.isActive = false;
-    subscription.autoRenew = false;
-    subscription.canceledAt = new Date();
-    await subscription.save();
-
-    // Kiểm tra xem người dùng có còn subscription nào active không
-    const userId = subscription.userId;
-    const hasActiveSubscription = await UserSubscription.hasActiveSubscription(userId);
-
-    // Nếu không còn subscription active nào và người dùng có role là premium_user, chuyển về user
-    if (!hasActiveSubscription) {
-      const user = await User.findById(userId);
-      if (user && user.role === 'premium_user') {
-        user.role = 'user';
-        await user.save();
-      }
-    }
-  } catch (error) {
-    console.error(`Error handling subscription.deleted: ${error.message}`);
-    throw error;
-  }
-}
+// Các hàm helper handleCheckoutSessionCompleted, handleInvoicePaid, handleSubscriptionDeleted đã được chuyển sang paymentService.js
 
 /**
  * @desc    Lấy thông tin subscription hiện tại của người dùng
@@ -518,19 +268,12 @@ exports.getPaymentHistory = async (req, res, next) => {
  */
 exports.deleteSubscriptionPlan = async (req, res, next) => {
   try {
-    const plan = await SubscriptionPlan.findById(req.params.id);
+    const planId = req.params.id; // ID is validated by deleteSubscriptionPlanValidator
 
-    if (!plan) {
-      return next(new ApiError('Không tìm thấy gói dịch vụ', 404));
-    }
+    // Call the service function
+    await paymentService.deleteSubscriptionPlan(planId);
 
-    // Deactivate the plan instead of deleting, safer approach
-    plan.isActive = false;
-
-    // Optionally deactivate Stripe product (requires careful consideration of active subscriptions)
-    // await stripe.products.update(plan.stripeProductId, { active: false });
-
-    await plan.save();
+    // Service handles 'not found' error and deactivation logic
 
     res.status(200).json(ApiResponse.success(null, 'Gói dịch vụ đã được hủy kích hoạt'));
   } catch (error) {

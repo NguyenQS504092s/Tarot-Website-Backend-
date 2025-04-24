@@ -60,7 +60,7 @@ const CardSchema = new mongoose.Schema(
 );
 
 // Index để tối ưu tìm kiếm
-CardSchema.index({ name: 1 });
+// CardSchema.index({ name: 1 }); // Removed duplicate index (unique: true already creates one)
 CardSchema.index({ type: 1 });
 CardSchema.index({ suit: 1 });
 

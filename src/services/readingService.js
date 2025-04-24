@@ -15,10 +15,10 @@ const ApiError = require('../utils/apiError');
  * @param {Boolean} allowReversed Cho phép lá bài ngược (tùy chọn)
  * @returns {Promise<Object>} Thông tin phiên đọc bài mới tạo
  */
-exports.createRandomReading = async (userId, spreadName, question, deckName = 'Rider Waite Smith', allowReversed = true) => {
+exports.createReading = async (userId, spreadType, question, deckName = 'Rider Waite Smith', allowReversed = true) => {
   try {
     // Rút lá bài ngẫu nhiên dựa trên kiểu trải bài
-    const drawnCards = await cardService.drawCardsForSpread(spreadName, deckName, allowReversed);
+    const drawnCards = await cardService.drawCardsForSpread(spreadType, deckName, allowReversed);
     
     // Tạo mảng cards cho phiên đọc bài
     const cards = drawnCards.map(drawnCard => ({
@@ -30,7 +30,7 @@ exports.createRandomReading = async (userId, spreadName, question, deckName = 'R
     // Tạo phiên đọc bài mới
     const newReading = await Reading.create({
       userId,
-      spread: spreadName,
+      spread: spreadType, // Use spreadType from input
       question,
       cards
     });
@@ -341,3 +341,112 @@ function generateOverallInsight(reading) {
   
   return insight;
 }
+
+/**
+ * Lấy tất cả các phiên đọc bài (dành cho Admin)
+ * @param {Number} page Số trang
+ * @param {Number} limit Số phiên đọc bài trên một trang
+ * @returns {Promise<Object>} Danh sách tất cả phiên đọc bài và thông tin phân trang
+ */
+exports.getAllReadings = async (page = 1, limit = 10) => {
+  try {
+    const skip = (page - 1) * limit;
+    const limitInt = parseInt(limit);
+    const pageInt = parseInt(page);
+
+    const totalReadings = await Reading.countDocuments();
+    const readings = await Reading.find()
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitInt)
+      .populate({ path: 'userId', select: 'name email' }) // Populate user info
+      .populate({ path: 'readerId', select: 'name email' }) // Populate reader info if available
+      .populate({ path: 'cards.cardId', select: 'name imageUrl' }); // Populate basic card info
+
+    return {
+      readings,
+      pagination: {
+        total: totalReadings,
+        page: pageInt,
+        limit: limitInt,
+        totalPages: Math.ceil(totalReadings / limitInt)
+      }
+    };
+  } catch (error) {
+    throw new ApiError(`Lỗi khi lấy tất cả phiên đọc bài: ${error.message}`, 500);
+  }
+};
+
+/**
+ * Xóa một phiên đọc bài (dành cho Admin)
+ * @param {String} readingId ID của phiên đọc bài cần xóa
+ * @returns {Promise<Object>} Thông tin xác nhận xóa
+ */
+exports.deleteReading = async (readingId) => {
+  try {
+    const reading = await Reading.findByIdAndDelete(readingId);
+
+    if (!reading) {
+      throw new ApiError('Không tìm thấy phiên đọc bài để xóa', 404);
+    }
+
+    // Có thể thêm logic khác ở đây nếu cần, ví dụ: xóa các dữ liệu liên quan
+
+    return { message: 'Phiên đọc bài đã được xóa thành công', deletedReadingId: readingId };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(`Lỗi khi xóa phiên đọc bài: ${error.message}`, 500);
+  }
+};
+
+/**
+ * Cập nhật thông tin một phiên đọc bài (dành cho Admin)
+ * @param {String} readingId ID của phiên đọc bài cần cập nhật
+ * @param {Object} updateData Dữ liệu cần cập nhật
+ * @returns {Promise<Object>} Thông tin phiên đọc bài đã được cập nhật
+ */
+exports.updateReading = async (readingId, updateData) => {
+  try {
+    // Xác định các trường được phép cập nhật bởi admin
+    const allowedUpdates = ['question', 'interpretation', 'readerId', 'isPublic']; // Removed 'status'
+    const filteredUpdateData = {};
+    Object.keys(updateData).forEach(key => {
+      if (allowedUpdates.includes(key)) {
+        filteredUpdateData[key] = updateData[key];
+      }
+    });
+
+    // Kiểm tra xem có dữ liệu hợp lệ để cập nhật không
+    if (Object.keys(filteredUpdateData).length === 0) {
+      throw new ApiError('Không có dữ liệu hợp lệ để cập nhật', 400);
+    }
+
+    // Tìm và cập nhật reading
+    const updatedReading = await Reading.findByIdAndUpdate(
+      readingId,
+      filteredUpdateData,
+      { new: true, runValidators: true } // Trả về document mới và chạy validators
+    )
+    .populate({ path: 'userId', select: 'name email' })
+    .populate({ path: 'readerId', select: 'name email' })
+    .populate({ path: 'cards.cardId', select: 'name imageUrl' });
+
+    if (!updatedReading) {
+      throw new ApiError('Không tìm thấy phiên đọc bài để cập nhật', 404);
+    }
+
+    return updatedReading;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    // Xử lý lỗi validation từ Mongoose
+    if (error.name === 'ValidationError') {
+        const messages = Object.values(error.errors).map(val => val.message);
+        throw new ApiError(`Lỗi validation: ${messages.join('. ')}`, 400);
+    }
+    throw new ApiError(`Lỗi khi cập nhật phiên đọc bài: ${error.message}`, 500);
+  }
+};

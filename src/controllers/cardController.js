@@ -1,4 +1,5 @@
-const Card = require('../models/cardModel');
+// const Card = require('../models/cardModel'); // Model interaction moved to service
+const cardService = require('../services/cardService'); // Import the service
 const ApiResponse = require('../utils/apiResponse');
 const ApiError = require('../utils/apiError');
 
@@ -78,11 +79,13 @@ exports.getCardsByDeck = async (req, res, next) => {
 exports.getCardsByType = async (req, res, next) => {
   try {
     const { cardType } = req.params;
-    // Use case-insensitive regex
-    const cards = await Card.find({ type: { $regex: new RegExp(`^${cardType}$`, 'i') } });
+    // Call the service function
+    const cards = await cardService.getCardsByType(cardType);
+    
+    // Service handles the 'not found' error
     
     res.status(200).json(ApiResponse.success(
-      cards,
+      cards, // Service returns the found cards
       `Lấy danh sách lá bài loại ${cardType} thành công`
     ));
   } catch (error) {
@@ -97,10 +100,11 @@ exports.getCardsByType = async (req, res, next) => {
  */
 exports.createCard = async (req, res, next) => {
   try {
-    const newCard = await Card.create(req.body);
+    // Call the service function
+    const newCard = await cardService.createCard(req.body);
     
     res.status(201).json(ApiResponse.success(
-      newCard,
+      newCard, // Service returns the created card
       'Tạo lá bài mới thành công',
       201
     ));
@@ -119,18 +123,13 @@ exports.createCard = async (req, res, next) => {
  */
 exports.updateCard = async (req, res, next) => {
   try {
-    const card = await Card.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
+    // Call the service function
+    const updatedCard = await cardService.updateCard(req.params.id, req.body);
     
-    if (!card) {
-      return next(new ApiError('Không tìm thấy lá bài', 404));
-    }
+    // Service handles the 'not found' error, so no need to check here
     
     res.status(200).json(ApiResponse.success(
-      card,
+      updatedCard, // Service returns the updated card
       'Cập nhật lá bài thành công'
     ));
   } catch (error) {
@@ -145,14 +144,13 @@ exports.updateCard = async (req, res, next) => {
  */
 exports.deleteCard = async (req, res, next) => {
   try {
-    const card = await Card.findByIdAndDelete(req.params.id);
+    // Call the service function
+    await cardService.deleteCard(req.params.id);
     
-    if (!card) {
-      return next(new ApiError('Không tìm thấy lá bài', 404));
-    }
+    // Service handles the 'not found' error
     
     res.status(200).json(ApiResponse.success(
-      null,
+      null, // No data to return on successful deletion
       'Lá bài đã được xóa'
     ));
   } catch (error) {

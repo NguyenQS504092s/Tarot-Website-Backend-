@@ -1,6 +1,8 @@
 const Zodiac = require('../models/zodiacModel');
+const Zodiac = require('../models/zodiacModel');
 const Horoscope = require('../models/horoscopeModel');
 const Card = require('../models/cardModel');
+const astrologyService = require('../services/astrologyService'); // Import the service
 const ApiError = require('../utils/apiError');
 const ApiResponse = require('../utils/apiResponse');
 const { normalizeString, getEnumValues } = require('../utils/stringUtils'); // Import utils
@@ -17,6 +19,28 @@ exports.getAllZodiacSigns = async (req, res, next) => {
     
     // Trả về dữ liệu (có thể là mảng rỗng nếu DB trống)
     res.status(200).json(ApiResponse.success(zodiacSigns, 'Lấy danh sách cung hoàng đạo thành công'));
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Xóa tử vi hàng ngày (dành cho admin)
+ * @route   DELETE /api/horoscope/:id
+ * @access  Admin
+ */
+exports.deleteDailyHoroscope = async (req, res, next) => {
+  try {
+    const horoscopeId = req.params.id;
+
+    // TODO: Add validation for horoscopeId if needed (e.g., isMongoId)
+
+    // Call service to delete
+    await astrologyService.deleteDailyHoroscope(horoscopeId); // Use the service
+
+    // Service handles 'not found' error
+
+    res.status(200).json(ApiResponse.success(null, 'Xóa tử vi thành công'));
   } catch (error) {
     next(error);
   }
@@ -126,42 +150,12 @@ exports.getZodiacCompatibility = async (req, res, next) => {
       return next(new ApiError('Vui lòng cung cấp hai cung hoàng đạo khác nhau.', 400));
     }
 
-    // Find both zodiac signs in the database
-    const [zodiac1, zodiac2] = await Promise.all([
-      Zodiac.findOne({ name: matchedSign1 }),
-      Zodiac.findOne({ name: matchedSign2 })
-    ]);
+    // Call the service function with validated sign names
+    const compatibilityResult = await astrologyService.getZodiacCompatibility(matchedSign1, matchedSign2);
 
-    if (!zodiac1 || !zodiac2) {
-      return next(new ApiError('Không tìm thấy thông tin cho một hoặc cả hai cung hoàng đạo.', 404));
-    }
+    // Service handles 'not found' errors
 
-    // Find compatibility data (assuming it's stored symmetrically or needs calculation)
-    // This simplified version just checks if data exists in zodiac1 for zodiac2
-    const compatibilityData = zodiac1.compatibility.find(
-      comp => comp.sign === matchedSign2 // Use exact enum match
-    );
-
-    if (!compatibilityData) {
-      // No specific compatibility data found in DB for this pair
-      // Return a generic message or calculate dynamically if needed
-      // For now, return 404 as specific data is missing
-      return next(new ApiError(`Không tìm thấy dữ liệu tương hợp cụ thể giữa ${matchedSign1} và ${matchedSign2}.`, 404));
-    }
-
-    // Remove fallback/random data logic
-    // Format the response based on found data
-    const responseData = {
-      sign1: zodiac1.name,
-      sign2: zodiac2.name,
-      sign1En: zodiac1.nameEn,
-      sign2En: zodiac2.nameEn,
-      compatibilityScore: compatibilityData.score,
-      description: compatibilityData.description,
-      // Add other relevant fields if needed
-    };
-
-    res.status(200).json(ApiResponse.success(responseData, 'Lấy thông tin tương hợp thành công'));
+    res.status(200).json(ApiResponse.success(compatibilityResult, 'Lấy thông tin tương hợp thành công'));
   } catch (error) {
     next(error);
   }
@@ -188,34 +182,12 @@ exports.getTarotZodiacRelation = async (req, res, next) => {
       return next(new ApiError(`Cung hoàng đạo không hợp lệ: ${inputSign}`, 400));
     }
 
-    // Find the zodiac sign and populate relations
-    const zodiac = await Zodiac.findOne({ name: matchedSign })
-                               .populate('tarotRelations.cardId', 'name type'); // Populate only needed fields
+    // Call the service function with the validated sign name
+    const relationData = await astrologyService.getTarotZodiacRelation(matchedSign);
 
-    if (!zodiac) {
-      return next(new ApiError(`Không tìm thấy thông tin cho cung hoàng đạo: ${matchedSign}`, 404));
-    }
+    // Service handles 'not found' errors
 
-    if (!zodiac.tarotRelations || zodiac.tarotRelations.length === 0) {
-      return next(new ApiError(`Không tìm thấy thông tin liên kết Tarot cho cung ${matchedSign}.`, 404));
-    }
-
-    // Format the response based on actual data, avoid assumptions about array order
-    const formattedRelations = zodiac.tarotRelations.map(rel => ({
-      cardName: rel.cardId ? rel.cardId.name : 'N/A', // Handle potential missing card data
-      cardType: rel.cardId ? rel.cardId.type : 'N/A',
-      description: rel.description
-    }));
-
-    const responseData = {
-      sign: zodiac.name,
-      signEn: zodiac.nameEn,
-      element: zodiac.element,
-      relations: formattedRelations
-    };
-
-    // Remove fallback data logic
-    res.status(200).json(ApiResponse.success(responseData, 'Lấy liên kết Tarot thành công'));
+    res.status(200).json(ApiResponse.success(relationData, 'Lấy liên kết Tarot thành công'));
   } catch (error) {
     next(error);
   }
@@ -228,57 +200,16 @@ exports.getTarotZodiacRelation = async (req, res, next) => {
  */
 exports.createDailyHoroscope = async (req, res, next) => {
   try {
-    const {
-      sign,
-      date,
-      general,
-      love,
-      career,
-      health,
-      lucky_number,
-      lucky_color,
-      lucky_time,
-      mood,
-      compatibility
-    } = req.body;
+    // Data is already validated by createHoroscopeValidator
+    const horoscopeData = req.body;
+    const authorId = req.user._id; // Get author from authenticated user
 
-    // Normalize date before checking and creating
-    const targetDate = date ? new Date(date) : new Date();
-    targetDate.setHours(0, 0, 0, 0); // Normalize to start of day
+    // Call the service function
+    const newHoroscope = await astrologyService.createDailyHoroscope(horoscopeData, authorId);
 
-    // Validate sign against enum
-    const allowedSigns = getEnumValues(Horoscope.schema, 'sign');
-    if (!allowedSigns || !allowedSigns.includes(sign)) {
-      return next(new ApiError(`Cung hoàng đạo không hợp lệ: ${sign}`, 400));
-    }
+    // Service handles validation and existing checks
 
-    // Kiểm tra xem đã có tử vi cho cung hoàng đạo này trong ngày này chưa
-    const existingHoroscope = await Horoscope.findOne({
-      sign: sign,
-      date: targetDate // Use normalized date
-    });
-
-    if (existingHoroscope) {
-      return next(new ApiError(`Đã tồn tại tử vi cho cung ${sign} vào ngày ${targetDate.toLocaleDateString('vi-VN')}.`, 400));
-    }
-
-    // Tạo tử vi mới
-    const horoscope = await Horoscope.create({
-      sign,
-      date: date || new Date(),
-      general,
-      love,
-      career,
-      health,
-      lucky_number,
-      lucky_color,
-      lucky_time,
-      mood,
-      compatibility,
-      author: req.user._id // Assuming req.user is populated by auth middleware
-    });
-
-    res.status(201).json(ApiResponse.success(horoscope, 'Tạo tử vi hàng ngày thành công', 201));
+    res.status(201).json(ApiResponse.success(newHoroscope, 'Tạo tử vi hàng ngày thành công', 201));
   } catch (error) {
     next(error);
   }
@@ -291,22 +222,14 @@ exports.createDailyHoroscope = async (req, res, next) => {
  */
 exports.updateDailyHoroscope = async (req, res, next) => {
   try {
-    const horoscopeId = req.params.id;
-    
-    // Kiểm tra xem tử vi có tồn tại không
-    const horoscope = await Horoscope.findById(horoscopeId);
-    
-    if (!horoscope) {
-      return next(new ApiError('Không tìm thấy tử vi với ID này', 404));
-    }
-    
-    // Cập nhật thông tin
-    const updatedHoroscope = await Horoscope.findByIdAndUpdate(
-      horoscopeId,
-      req.body,
-      { new: true, runValidators: true } // Return updated doc, run validators
-    );
-    
+    const horoscopeId = req.params.id; // ID is validated by updateHoroscopeValidator
+    const updateData = req.body; // Data is validated by updateHoroscopeValidator
+
+    // Call the service function
+    const updatedHoroscope = await astrologyService.updateDailyHoroscope(horoscopeId, updateData);
+
+    // Service handles 'not found' and validation errors
+
     res.status(200).json(ApiResponse.success(updatedHoroscope, 'Cập nhật tử vi thành công'));
   } catch (error) {
     next(error);
@@ -320,22 +243,15 @@ exports.updateDailyHoroscope = async (req, res, next) => {
  */
 exports.createZodiacSign = async (req, res, next) => {
   try {
-    // Kiểm tra xem cung hoàng đạo đã tồn tại chưa
-    const existingZodiac = await Zodiac.findOne({
-      $or: [
-        { name: req.body.name },
-        { nameEn: req.body.nameEn }
-      ]
-    });
+    // Data is validated by createZodiacSignValidator
+    const zodiacData = req.body;
 
-    if (existingZodiac) {
-      return next(new ApiError('Cung hoàng đạo này đã tồn tại (trùng tên hoặc tên tiếng Anh).', 400));
-    }
+    // Call the service function
+    const newZodiac = await astrologyService.createZodiacSign(zodiacData);
 
-    // Tạo cung hoàng đạo mới
-    const zodiac = await Zodiac.create(req.body);
+    // Service handles existing checks and validation errors
 
-    res.status(201).json(ApiResponse.success(zodiac, 'Tạo cung hoàng đạo thành công', 201));
+    res.status(201).json(ApiResponse.success(newZodiac, 'Tạo cung hoàng đạo thành công', 201));
   } catch (error) {
     next(error);
   }
@@ -348,22 +264,14 @@ exports.createZodiacSign = async (req, res, next) => {
  */
 exports.updateZodiacSign = async (req, res, next) => {
   try {
-    const zodiacId = req.params.id;
-    
-    // Kiểm tra xem cung hoàng đạo có tồn tại không
-    const zodiac = await Zodiac.findById(zodiacId);
-    
-    if (!zodiac) {
-      return next(new ApiError('Không tìm thấy cung hoàng đạo với ID này', 404));
-    }
-    
-    // Cập nhật thông tin
-    const updatedZodiac = await Zodiac.findByIdAndUpdate(
-      zodiacId,
-      req.body,
-      { new: true, runValidators: true }
-    );
-    
+    const zodiacId = req.params.id; // ID is validated by updateZodiacSignValidator
+    const updateData = req.body; // Data is validated by updateZodiacSignValidator
+
+    // Call the service function
+    const updatedZodiac = await astrologyService.updateZodiacSign(zodiacId, updateData);
+
+    // Service handles 'not found' and validation errors
+
     res.status(200).json(ApiResponse.success(updatedZodiac, 'Cập nhật cung hoàng đạo thành công'));
   } catch (error) {
     next(error);
@@ -416,6 +324,28 @@ exports.addTarotRelation = async (req, res, next) => {
     const updatedZodiac = await Zodiac.findById(id).populate('tarotRelations.cardId', 'name type');
     
     res.status(200).json(ApiResponse.success(updatedZodiac, 'Thêm liên kết Tarot thành công'));
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Xóa cung hoàng đạo (dành cho admin)
+ * @route   DELETE /api/horoscope/signs/:id
+ * @access  Admin
+ */
+exports.deleteZodiacSign = async (req, res, next) => {
+  try {
+    const zodiacId = req.params.id;
+
+    // TODO: Add validation for zodiacId if needed (e.g., isMongoId)
+
+    // Call service to delete
+    await astrologyService.deleteZodiacSign(zodiacId); // Use the service
+
+    // Service handles 'not found' error
+
+    res.status(200).json(ApiResponse.success(null, 'Xóa cung hoàng đạo thành công'));
   } catch (error) {
     next(error);
   }
