@@ -1,5 +1,4 @@
 const { SubscriptionPlan, Payment, UserSubscription } = require('../models/paymentModel');
-const { SubscriptionPlan, Payment, UserSubscription } = require('../models/paymentModel');
 const User = require('../models/userModel');
 const paymentService = require('../services/paymentService'); // Import the service
 const ApiError = require('../utils/apiError');

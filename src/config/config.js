@@ -7,10 +7,14 @@ const config = {
   jwtSecret: process.env.JWT_SECRET, // Không còn fallback value nữa
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d',
-  
-  mongoUri: process.env.MONGODB_URI,
+
+  // Chọn MongoDB URI dựa trên môi trường
+  mongoUri: process.env.NODE_ENV === 'test'
+    ? process.env.MONGODB_TEST_URI // Sử dụng DB test khi NODE_ENV=test
+    : process.env.MONGODB_URI,     // Sử dụng DB chính cho các môi trường khác
+
   corsOrigin: process.env.CORS_ORIGIN || '*',
-  
+
   // Ứng dụng
   apiPrefix: process.env.API_PREFIX || '/api',
   freeReadingsPerDay: parseInt(process.env.FREE_READINGS_PER_DAY, 10) || 3,

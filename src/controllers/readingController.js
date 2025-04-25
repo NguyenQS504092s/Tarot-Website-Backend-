@@ -104,17 +104,42 @@ exports.getReadingById = async (req, res, next) => {
     }
     
     // Kiểm tra quyền truy cập (chỉ cho phép chủ sở hữu, reader đã được gán hoặc admin)
-    const isOwner = reading.userId.toString() === req.user._id.toString();
+    // Sửa: So sánh _id của đối tượng userId (nếu đã populate) hoặc chính userId (nếu chưa)
+    const readingUserIdString = reading.userId._id ? reading.userId._id.toString() : reading.userId.toString();
+    const isOwner = readingUserIdString === req.user._id.toString();
     const isReader = reading.readerId && reading.readerId.toString() === req.user._id.toString();
     const isAdmin = req.user.role === 'admin';
-    
-    if (!isOwner && !isReader && !isAdmin && !reading.isPublic) {
+
+    let canAccess = false;
+
+    // 1. Owner, Reader, Admin luôn có quyền truy cập
+    if (isOwner || isReader || isAdmin) {
+      canAccess = true;
+    }
+    // 2. Nếu không phải các role trên, kiểm tra xem reading có public không
+    else if (reading.isPublic) {
+       canAccess = true;
+    }
+
+    // Nếu không được phép truy cập
+    if (!canAccess) {
       return next(new ApiError('Bạn không có quyền xem phiên đọc bài này', 403));
     }
-    
+
+    // Nếu được phép, populate thông tin chi tiết trước khi gửi response
+    await reading.populate([
+        { path: 'userId', select: 'name email' },
+        { path: 'readerId', select: 'name email' },
+        { path: 'cards.cardId', select: 'name type suit number imageUrl uprightMeaning reversedMeaning' }
+    ]);
+
     res.status(200).json(ApiResponse.success(reading, 'Lấy thông tin phiên đọc bài thành công'));
   } catch (error) {
-    next(error);
+     // Handle potential CastError if ID is invalid format but somehow bypasses validator
+     if (error.name === 'CastError') {
+        return next(new ApiError(`ID không hợp lệ: ${req.params.id}`, 400));
+    }
+    next(error); // Pass other errors to the error middleware
   }
 };
 
@@ -225,7 +250,7 @@ exports.addInterpretation = async (req, res, next) => {
 
     // Service đã xử lý lỗi không tìm thấy hoặc đã có diễn giải
 
-    res.status(200).json(ApiResponse.success(updatedCard, 'Thêm diễn giải thành công')); // Sửa biến trả về
+    res.status(200).json(ApiResponse.success(updatedReading, 'Thêm diễn giải thành công')); // Sử dụng đúng biến updatedReading
   } catch (error) {
     next(error);
   }

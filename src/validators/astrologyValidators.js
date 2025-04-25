@@ -8,9 +8,16 @@ const handleValidationErrors = (req, res, next) => {
         const formattedErrors = errors.array().map(err => ({
             field: err.param,
             message: err.msg,
-            value: err.value,
+            field: err.param,
+            message: err.msg,
         }));
-        return next(new ApiError(400, 'Validation failed', formattedErrors));
+        // Trả về lỗi với cấu trúc chứa 'errors' property
+        return res.status(400).json({
+            success: false,
+            status: 'fail',
+            message: 'Validation failed',
+            errors: formattedErrors // Trả về mảng lỗi chi tiết
+        });
     }
     next();
 };
@@ -58,51 +65,55 @@ const getZodiacInfoBySignValidator = [
     handleValidationErrors
 ];
 
-// Validation rules for creating horoscope (Admin)
+// Validation rules for creating horoscope (Admin) - Sửa cho khớp model
 const createHoroscopeValidator = [
-    body('sign').trim().notEmpty().withMessage('Zodiac sign is required.').isString(),
-    body('date').notEmpty().withMessage('Date is required.').isISO8601().withMessage('Invalid date format (YYYY-MM-DD).'),
-    body('content').trim().notEmpty().withMessage('Horoscope content is required.'),
-    body('timeframe').trim().notEmpty().withMessage('Timeframe is required.').isIn(['daily', 'weekly', 'monthly']),
+    body('sign').trim().notEmpty().withMessage('Cung hoàng đạo là bắt buộc').isString(),
+    body('date').notEmpty().withMessage('Ngày là bắt buộc').isISO8601().withMessage('Định dạng ngày không hợp lệ (YYYY-MM-DD).'),
+    body('general').trim().notEmpty().withMessage('Nội dung tử vi chung là bắt buộc'),
+    body('love').trim().notEmpty().withMessage('Nội dung tử vi tình yêu là bắt buộc'),
+    body('career').trim().notEmpty().withMessage('Nội dung tử vi sự nghiệp là bắt buộc'),
+    body('health').trim().notEmpty().withMessage('Nội dung tử vi sức khỏe là bắt buộc'),
+    // Các trường optional khác có thể thêm validation nếu cần (lucky_number, lucky_color, etc.)
     handleValidationErrors
 ];
 
-// Validation rules for updating horoscope (Admin)
+// Validation rules for updating horoscope (Admin) - Sửa cho khớp model
 const updateHoroscopeValidator = [
     param('id').notEmpty().withMessage('Horoscope ID is required.').isMongoId().withMessage('Invalid Horoscope ID format.'),
     body('sign').optional().trim().isString(),
     body('date').optional().isISO8601().withMessage('Invalid date format (YYYY-MM-DD).'),
-    body('content').optional().trim().notEmpty().withMessage('Horoscope content cannot be empty.'),
-    body('timeframe').optional().trim().isIn(['daily', 'weekly', 'monthly']),
+    body('general').optional().trim().notEmpty().withMessage('Nội dung tử vi chung không được rỗng'),
+    body('love').optional().trim().notEmpty().withMessage('Nội dung tử vi tình yêu không được rỗng'),
+    body('career').optional().trim().notEmpty().withMessage('Nội dung tử vi sự nghiệp không được rỗng'),
+    body('health').optional().trim().notEmpty().withMessage('Nội dung tử vi sức khỏe không được rỗng'),
+    // Các trường optional khác
     handleValidationErrors
 ];
 
-// Validation rules for creating zodiac sign (Admin)
+// Validation rules for creating zodiac sign (Admin) - Sửa cho khớp model
 const createZodiacSignValidator = [
-    body('name').trim().notEmpty().withMessage('Zodiac sign name is required.'),
-    body('slug').trim().notEmpty().withMessage('Slug is required.'), // Consider adding isSlug() if available or regex
-    body('startDate').notEmpty().withMessage('Start date is required.').matches(/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/).withMessage('Invalid start date format (MM-DD).'),
-    body('endDate').notEmpty().withMessage('End date is required.').matches(/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/).withMessage('Invalid end date format (MM-DD).'),
-    body('element').optional().trim().isString(),
-    body('modality').optional().trim().isString(),
-    body('rulingPlanet').optional().trim().isString(),
-    body('symbol').optional().trim().isString(),
-    body('description').optional().trim().isString(),
+    body('name').trim().notEmpty().withMessage('Tên cung hoàng đạo là bắt buộc').isString(),
+    body('nameEn').trim().notEmpty().withMessage('Tên tiếng Anh là bắt buộc').isString(),
+    body('symbol').trim().notEmpty().withMessage('Ký hiệu là bắt buộc').isString(),
+    body('element').trim().notEmpty().withMessage('Nguyên tố là bắt buộc').isIn(['Lửa', 'Đất', 'Khí', 'Nước']),
+    body('period').trim().notEmpty().withMessage('Thời gian là bắt buộc').isString(), // Có thể thêm regex nếu cần format cụ thể
+    body('ruling_planet').trim().notEmpty().withMessage('Hành tinh chủ quản là bắt buộc').isString(),
+    body('description').trim().notEmpty().withMessage('Mô tả là bắt buộc').isString(),
+    // Các trường optional như strengths, weaknesses, compatibility, tarotRelations không cần validate ở đây
     handleValidationErrors
 ];
 
-// Validation rules for updating zodiac sign (Admin)
+// Validation rules for updating zodiac sign (Admin) - Sửa cho khớp model
 const updateZodiacSignValidator = [
     param('id').notEmpty().withMessage('Zodiac Sign ID is required.').isMongoId().withMessage('Invalid Zodiac Sign ID format.'),
-    body('name').optional().trim().notEmpty().withMessage('Zodiac sign name cannot be empty.'),
-    body('slug').optional().trim().notEmpty().withMessage('Slug cannot be empty.'),
-    body('startDate').optional().matches(/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/).withMessage('Invalid start date format (MM-DD).'),
-    body('endDate').optional().matches(/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/).withMessage('Invalid end date format (MM-DD).'),
-    body('element').optional().trim().isString(),
-    body('modality').optional().trim().isString(),
-    body('rulingPlanet').optional().trim().isString(),
-    body('symbol').optional().trim().isString(),
-    body('description').optional().trim().isString(),
+    body('name').optional().trim().notEmpty().withMessage('Tên cung hoàng đạo không được rỗng').isString(),
+    body('nameEn').optional().trim().notEmpty().withMessage('Tên tiếng Anh không được rỗng').isString(),
+    body('symbol').optional().trim().notEmpty().withMessage('Ký hiệu không được rỗng').isString(),
+    body('element').optional().trim().notEmpty().withMessage('Nguyên tố không được rỗng').isIn(['Lửa', 'Đất', 'Khí', 'Nước']),
+    body('period').optional().trim().notEmpty().withMessage('Thời gian không được rỗng').isString(),
+    body('ruling_planet').optional().trim().notEmpty().withMessage('Hành tinh chủ quản không được rỗng').isString(),
+    body('description').optional().trim().notEmpty().withMessage('Mô tả không được rỗng').isString(),
+    // Các trường optional khác
     handleValidationErrors
 ];
 

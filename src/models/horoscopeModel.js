@@ -86,16 +86,23 @@ HoroscopeSchema.pre('save', function(next) {
 
 // Thêm method để tìm tử vi cho một cung hoàng đạo trong một ngày cụ thể
 HoroscopeSchema.statics.findDailyHoroscope = async function(sign, date = new Date()) {
-  // Định dạng ngày cho đúng (loại bỏ phần thời gian, chỉ giữ ngày) - Date is already normalized in DB
-  const targetDate = new Date(date);
-  targetDate.setHours(0, 0, 0, 0); // Normalize the query date as well
+  // Xác định ngày bắt đầu và kết thúc của ngày mục tiêu (UTC)
+  const startOfDay = new Date(date);
+  startOfDay.setUTCHours(0, 0, 0, 0); // Bắt đầu ngày (UTC)
 
-  // Tìm tử vi cho cung hoàng đạo trong ngày (date field is already normalized)
+  const endOfDay = new Date(startOfDay);
+  endOfDay.setUTCDate(startOfDay.getUTCDate() + 1); // Ngày hôm sau (UTC)
+
+  // Tìm tử vi cho cung hoàng đạo trong khoảng thời gian của ngày đó
+  // Dữ liệu 'date' trong DB đã được chuẩn hóa về đầu ngày bởi pre-save hook
   return this.findOne({
     sign: sign,
-    date: targetDate, // Exact match on the normalized date
+    date: {
+      $gte: startOfDay, // Lớn hơn hoặc bằng đầu ngày
+      $lt: endOfDay     // Nhỏ hơn đầu ngày hôm sau
+    },
     isActive: true
-  });
+  }).sort({ date: -1 }); // Lấy bản ghi mới nhất nếu có nhiều bản ghi trong ngày (dù không nên xảy ra)
 };
 
 module.exports = mongoose.model('Horoscope', HoroscopeSchema);

@@ -18,7 +18,8 @@ router.use(authMiddleware.protect);
 
 // Routes cụ thể phải đặt trước route có pattern chung
 // Routes cho người dùng
-router.post('/', createReadingValidator, trackPerformance('createReading'), readingController.createReading);
+// Apply the validator to the create reading route
+router.post('/', createReadingValidator, trackPerformance('createReading'), readingController.createReading); 
 // TODO: Add validation for random reading if needed (e.g., spreadType if provided)
 router.post('/random', trackPerformance('createRandomReading'), readingController.createRandomReading);
 router.get('/history', trackPerformance('getUserReadingHistory'), readingController.getUserReadingHistory);

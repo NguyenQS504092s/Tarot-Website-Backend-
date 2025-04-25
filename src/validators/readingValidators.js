@@ -1,8 +1,8 @@
 const { body, param, validationResult } = require('express-validator');
-const mongoose = require('mongoose');
 const ApiError = require('../utils/apiError');
+const mongoose = require('mongoose'); // Needed for isMongoId
 
-// Middleware to handle validation errors (can be reused or defined centrally)
+// Middleware to handle validation errors
 const handleValidationErrors = (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -11,48 +11,26 @@ const handleValidationErrors = (req, res, next) => {
             message: err.msg,
             value: err.value,
         }));
-        return next(new ApiError(400, 'Validation failed', formattedErrors));
+        return res.status(400).json({
+            success: false,
+            status: 'fail',
+            message: 'Dữ liệu không hợp lệ.',
+            errors: formattedErrors
+        });
     }
     next();
 };
 
-// Validation rules for creating a new reading
+// Validation rules for creating a reading
 const createReadingValidator = [
-    body('spreadType')
-        .trim()
-        .notEmpty().withMessage('Spread type is required.')
-        .isString().withMessage('Spread type must be a string.'), // Add more specific checks if needed (e.g., enum)
-    body('question')
-        .optional() // Question might be optional
-        .trim()
-        .isString().withMessage('Question must be a string.'),
-    // userId is usually derived from the authenticated user (authMiddleware),
-    // so direct validation might not be needed here unless it can be overridden.
+    body('question').trim().notEmpty().withMessage('Câu hỏi là bắt buộc.'),
+    body('spreadType').trim().notEmpty().withMessage('Kiểu trải bài là bắt buộc.'),
+    // Optional: Validate deckName if provided
+    body('deckName').optional().trim().isString().withMessage('Tên bộ bài phải là chuỗi.'),
     handleValidationErrors
 ];
 
-// Validation rules for updating a reading (Admin)
-const updateReadingValidator = [
-    // ID validation is handled by getReadingByIdValidator applied in the route
-    body('question')
-        .optional()
-        .trim()
-        .isString().withMessage('Question must be a string.'),
-    body('interpretation')
-        .optional()
-        .trim()
-        .isString().withMessage('Interpretation must be a string.'),
-    body('readerId')
-        .optional()
-        .isMongoId().withMessage('Invalid Reader ID format.'),
-    body('isPublic')
-        .optional()
-        .isBoolean().withMessage('isPublic must be a boolean value (true or false).'),
-    // Add validation for other updatable fields if needed (e.g., status if added to model)
-    handleValidationErrors
-];
-
-// Validation rules for getting a specific reading by ID
+// Validation rules for getting reading by ID
 const getReadingByIdValidator = [
     param('id')
         .notEmpty().withMessage('Reading ID is required.')
@@ -60,35 +38,28 @@ const getReadingByIdValidator = [
     handleValidationErrors
 ];
 
-// Validation rules for adding interpretation (Reader)
+// Validation rules for adding interpretation (Admin/Reader)
 const addInterpretationValidator = [
-    // ID validation is handled by getReadingByIdValidator applied in the route
-    body('interpretation')
-        .trim()
-        .notEmpty().withMessage('Interpretation content cannot be empty.')
-        .isString().withMessage('Interpretation must be a string.'),
+    body('interpretation').trim().notEmpty().withMessage('Diễn giải là bắt buộc.'),
     handleValidationErrors
 ];
 
 // Validation rules for adding feedback (User)
 const addFeedbackValidator = [
-    // ID validation is handled by getReadingByIdValidator applied in the route
-    body('rating')
-        .notEmpty().withMessage('Rating is required.')
-        .isInt({ min: 1, max: 5 }).withMessage('Rating must be an integer between 1 and 5.'),
-    body('comment')
-        .optional()
-        .trim()
-        .isString().withMessage('Comment must be a string.'),
+    body('rating').isInt({ min: 1, max: 5 }).withMessage('Đánh giá phải là số từ 1 đến 5.'),
+    body('comment').optional().trim().isString().withMessage('Bình luận phải là chuỗi.'),
     handleValidationErrors
 ];
 
-
-// Validation rules for getting readings by user ID (if applicable as a separate route)
-const getReadingsByUserValidator = [
-    param('userId') // Assuming userId is passed as a URL parameter
-        .notEmpty().withMessage('User ID is required.')
-        .isMongoId().withMessage('Invalid User ID format.'),
+// Validation rules for updating a reading (Admin)
+const updateReadingValidator = [
+    // ID is validated by getReadingByIdValidator applied in the route
+    body('question').optional().trim().notEmpty().withMessage('Câu hỏi không được rỗng.'),
+    body('spreadType').optional().trim().notEmpty().withMessage('Kiểu trải bài không được rỗng.'),
+    // body('status').optional().trim().isIn(['pending', 'interpreted', 'completed']).withMessage('Trạng thái không hợp lệ.'), // Status removed from allowed updates in service
+    body('interpretation').optional().trim().isString().withMessage('Diễn giải phải là chuỗi.'),
+    body('readerId').optional().isMongoId().withMessage('Reader ID không hợp lệ.'),
+    body('isPublic').optional().isBoolean().withMessage('isPublic phải là true hoặc false.'),
     handleValidationErrors
 ];
 
@@ -96,9 +67,7 @@ const getReadingsByUserValidator = [
 module.exports = {
     createReadingValidator,
     getReadingByIdValidator,
-    getReadingsByUserValidator,
     addInterpretationValidator,
     addFeedbackValidator,
-    updateReadingValidator, // Export the new validator
-    // Add validator for creating spreads if needed
+    updateReadingValidator,
 };

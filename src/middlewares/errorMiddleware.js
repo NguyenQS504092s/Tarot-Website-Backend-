@@ -22,55 +22,57 @@ const handleValidationErrorDB = err => {
 
 
 const errorMiddleware = (err, req, res, next) => {
+  // Log the original error received by the middleware
+  console.error('--- ERROR MIDDLEWARE RECEIVED ---');
+  console.error('Error Name:', err.name);
+  console.error('Error Message:', err.message);
+  console.error('Error Status Code:', err.statusCode);
+  console.error('Error Stack:', err.stack);
+  console.error('---------------------------------');
+
   let error = { ...err }; // Create a copy to avoid mutating the original err object directly
   error.message = err.message; // Ensure message is copied
   error.statusCode = err.statusCode || 500;
   error.status = err.status || 'error';
+  let finalStatusCode = error.statusCode; // Store initial status code
 
-  // Môi trường development: gửi toàn bộ thông tin lỗi
+  // Luôn trả về cấu trúc JSON nhất quán cho lỗi
+  const response = {
+    success: false, // Luôn là false khi có lỗi
+    status: error.status || 'error', // 'fail' cho lỗi client, 'error' cho lỗi server
+    message: error.message || 'Đã xảy ra lỗi không mong muốn'
+  };
+
+  // Môi trường development: thêm chi tiết lỗi
   if (process.env.NODE_ENV === 'development') {
-    res.status(err.statusCode).json({
-      status: err.status,
-      message: err.message,
-      error: err,
-      stack: err.stack
-    });
-  } 
-  // Môi trường production: chỉ gửi thông báo lỗi đơn giản
+    response.error = { ...err }; // Sao chép lỗi gốc
+    response.stack = err.stack;
+  }
+  // Môi trường production: xử lý lỗi cụ thể để có thông báo thân thiện hơn
   else {
-    // Lỗi hoạt động (operational error): gửi thông báo đến client
-    if (err.isOperational) {
-      res.status(err.statusCode).json({
-        status: err.status,
-        message: err.message
-      });
-    } 
-    // Lỗi lập trình hoặc lỗi không xác định: Xử lý các lỗi cụ thể trước
+    // Xử lý các lỗi cụ thể trước khi gửi response
+    let processedError = error; // Use a temporary variable
+    if (processedError.name === 'CastError') processedError = handleCastErrorDB(processedError);
+    if (processedError.name === 'ValidationError') processedError = handleValidationErrorDB(processedError);
+    // JWT errors đã được xử lý và chuyển thành ApiError (isOperational=true)
+
+    // Nếu lỗi là operational (đã biết, ví dụ ApiError), sử dụng thông báo và status code của nó
+    if (processedError.isOperational) {
+      response.status = processedError.status;
+      response.message = processedError.message;
+      finalStatusCode = processedError.statusCode; // Update status code from processed error
+    }
+    // Nếu là lỗi không xác định (lỗi server), ghi log và gửi thông báo chung
     else {
-      // Handle specific Mongoose errors first
-      if (error.name === 'CastError') error = handleCastErrorDB(error);
-      if (error.name === 'ValidationError') error = handleValidationErrorDB(error);
-      // JWT errors are already converted to operational ApiErrors by authMiddleware
-
-      // Log the original error for internal debugging, regardless of type
-      logger.error('ERROR 💥', err); // Log the original error stack
-
-      // Send response based on the potentially transformed error
-      // If it's still not an operational error after specific checks, send generic message
-      if (error.isOperational) {
-        res.status(error.statusCode).json({
-          status: error.status,
-          message: error.message
-        });
-      } else {
-        // Send generic message for truly unknown errors
-        res.status(500).json({
-          status: 'error',
-          message: 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.'
-        });
-      }
+      logger.error('ERROR 💥', err); // Log lỗi gốc không xác định
+      response.status = 'error';
+      response.message = 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.';
+      finalStatusCode = 500; // Ensure statusCode is 500 for unknown server errors
     }
   }
+
+  // Gửi response lỗi using the final determined status code
+  res.status(finalStatusCode).json(response);
 };
 
 module.exports = errorMiddleware;

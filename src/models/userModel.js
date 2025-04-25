@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const validator = require('validator');
 const jwt = require('jsonwebtoken');
 const config = require('../config/config');
+const logger = require('../utils/logger'); // Import logger
 
 const userSchema = new mongoose.Schema(
   {

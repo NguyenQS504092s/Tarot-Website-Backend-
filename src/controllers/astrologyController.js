@@ -1,5 +1,4 @@
 const Zodiac = require('../models/zodiacModel');
-const Zodiac = require('../models/zodiacModel');
 const Horoscope = require('../models/horoscopeModel');
 const Card = require('../models/cardModel');
 const astrologyService = require('../services/astrologyService'); // Import the service

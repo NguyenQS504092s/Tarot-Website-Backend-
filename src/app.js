@@ -60,7 +60,7 @@ app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 app.use('/api/users', userRoutes);
 app.use('/api/cards', cardRoutes);
 app.use('/api/readings', readingRoutes);
-app.use('/api/horoscope', astrologyRoutes);
+app.use('/api/astrology', astrologyRoutes); // Sửa prefix
 app.use('/api/chats', chatRoutes);
 app.use('/api/payments', paymentRoutes);
 

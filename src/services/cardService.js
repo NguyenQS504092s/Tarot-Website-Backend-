@@ -5,6 +5,46 @@ const Card = require('../models/cardModel');
 const ApiError = require('../utils/apiError');
 
 /**
+ * Lấy tất cả lá bài, có thể lọc theo query
+ * @param {Object} filter Bộ lọc Mongoose (ví dụ: { type: 'Major Arcana' })
+ * @returns {Promise<Array>} Danh sách các lá bài
+ */
+exports.getAllCards = async (filter = {}) => {
+  try {
+    const cards = await Card.find(filter);
+    return cards;
+  } catch (error) {
+    throw new ApiError(`Lỗi khi lấy tất cả lá bài: ${error.message}`, 500);
+  }
+};
+
+/**
+ * Lấy một lá bài theo ID
+ * @param {String} cardId ID của lá bài
+ * @returns {Promise<Object>} Lá bài tìm thấy hoặc null
+ */
+exports.getCardById = async (cardId) => {
+  try {
+    const card = await Card.findById(cardId);
+    if (!card) {
+      throw new ApiError(`Không tìm thấy lá bài với ID: ${cardId}`, 404);
+    }
+    return card;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error; // Re-throw known ApiErrors
+    }
+    // Handle potential CastError for invalid ID format specifically
+    if (error.name === 'CastError') {
+        throw new ApiError(`ID lá bài không hợp lệ: ${cardId}`, 400);
+    }
+    // For other errors, wrap them in a generic server error
+    throw new ApiError(`Lỗi khi lấy lá bài theo ID: ${error.message}`, 500);
+  }
+};
+
+
+/**
  * Trộn một mảng (thuật toán Fisher-Yates)
  * @param {Array} array Mảng cần trộn
  * @returns {Array} Mảng đã được trộn ngẫu nhiên
@@ -26,13 +66,11 @@ function shuffleArray(array) {
 exports.getCardsByDeck = async (deckName) => {
   try {
     // Use case-insensitive regex
+    // Use case-insensitive regex
     const cards = await Card.find({ deck: { $regex: new RegExp(`^${deckName}$`, 'i') } });
     
-    if (cards.length === 0) {
-      throw new ApiError(`Không tìm thấy lá bài nào thuộc bộ ${deckName}`, 404);
-    }
-    
-    return cards;
+    // Return empty array if no cards found, don't throw 404
+    return cards; 
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;
@@ -64,11 +102,8 @@ exports.getCardsByType = async (cardType) => {
 
     const cards = await Card.find(query);
 
-    if (cards.length === 0) {
-      throw new ApiError(`Không tìm thấy lá bài nào thuộc loại/suit "${cardType}"`, 404);
-    }
-
-    return cards;
+    // Return empty array if no cards found, don't throw 404
+    return cards; 
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;

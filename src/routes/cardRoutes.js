@@ -19,7 +19,8 @@ router.get('/', trackPerformance('getAllCards'), cardController.getAllCards);
 router.get('/deck/:deckName', getCardsByDeckValidator, trackPerformance('getCardsByDeck'), cardController.getCardsByDeck);
 router.get('/type/:cardType', getCardsByTypeValidator, trackPerformance('getCardsByType'), cardController.getCardsByType);
 // Route có param id phải đặt sau các route cụ thể khác
-router.get('/:id', getCardByIdValidator, trackPerformance('getCard'), cardController.getCard); // Already validated
+// Remove validator - let service/error middleware handle CastError for invalid ID format
+router.get('/:id', trackPerformance('getCard'), cardController.getCard); 
 
 // Routes cho admin - yêu cầu quyền admin
 router.use(authMiddleware.protect);

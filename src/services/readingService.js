@@ -30,7 +30,7 @@ exports.createReading = async (userId, spreadType, question, deckName = 'Rider W
     // Tạo phiên đọc bài mới
     const newReading = await Reading.create({
       userId,
-      spread: spreadType, // Use spreadType from input
+      spread: spreadType, // Use the correct field name 'spread' as per the validation error
       question,
       cards
     });
@@ -59,6 +59,8 @@ exports.createReading = async (userId, spreadType, question, deckName = 'Rider W
     if (error instanceof ApiError) {
       throw error;
     }
+    // Log the unexpected error for debugging
+    console.error('Unexpected error in createReading:', error); 
     throw new ApiError(`Lỗi khi tạo phiên đọc bài: ${error.message}`, 500);
   }
 };
@@ -168,7 +170,9 @@ exports.addFeedback = async (readingId, userId, rating, comment) => {
     }
     
     // Kiểm tra quyền - chỉ chủ sở hữu mới có thể thêm phản hồi
-    if (reading.userId.toString() !== userId.toString()) {
+    // Sửa: So sánh _id của đối tượng userId (nếu đã populate) hoặc chính userId (nếu chưa)
+    const readingUserIdString = reading.userId._id ? reading.userId._id.toString() : reading.userId.toString();
+    if (readingUserIdString !== userId.toString()) {
       throw new ApiError('Bạn không có quyền thêm phản hồi cho phiên đọc bài này', 403);
     }
     

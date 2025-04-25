@@ -87,7 +87,7 @@ exports.getTarotZodiacRelation = async (sign) => {
       sign: zodiac.name,
       signEn: zodiac.nameEn,
       element: zodiac.element,
-      relations: formattedRelations
+      tarotRelations: formattedRelations // Sửa key thành tarotRelations
     };
 
   } catch (error) {
@@ -137,13 +137,16 @@ exports.createDailyHoroscope = async (horoscopeData, authorId) => {
 
     return newHoroscope;
   } catch (error) {
-    if (error instanceof ApiError) {
+     if (error instanceof ApiError) {
       throw error;
     }
+    // Log the specific error before re-throwing
+    console.error(`Error in createDailyHoroscope: Name=${error.name}, Message=${error.message}`); 
     if (error.name === 'ValidationError') {
         throw new ApiError(`Lỗi validation khi tạo tử vi: ${error.message}`, 400);
     }
-    throw new ApiError(`Lỗi khi tạo tử vi hàng ngày: ${error.message}`, 500);
+    // Throw generic 500 for other errors
+    throw new ApiError(`Lỗi khi tạo tử vi hàng ngày: ${error.message}`, 500); 
   }
 };
 
@@ -245,9 +248,12 @@ exports.createZodiacSign = async (zodiacData) => {
      if (error instanceof ApiError) {
       throw error;
     }
+     // Log the specific error before re-throwing
+    console.error(`Error in createZodiacSign: Name=${error.name}, Message=${error.message}`);
     if (error.name === 'ValidationError') {
         throw new ApiError(`Lỗi validation khi tạo cung hoàng đạo: ${error.message}`, 400);
     }
+     // Throw generic 500 for other errors
     throw new ApiError(`Lỗi khi tạo cung hoàng đạo: ${error.message}`, 500);
   }
 };

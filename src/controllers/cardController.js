@@ -17,11 +17,12 @@ exports.getAllCards = async (req, res, next) => {
     if (deck) filter.deck = { $regex: new RegExp(`^${deck}$`, 'i') };
     if (type) filter.type = { $regex: new RegExp(`^${type}$`, 'i') };
     if (suit) filter.suit = { $regex: new RegExp(`^${suit}$`, 'i') };
-    
-    const cards = await Card.find(filter);
-    
+
+    // Call service function
+    const cards = await cardService.getAllCards(filter);
+
     res.status(200).json(ApiResponse.success(
-      cards, 
+      { cards }, // Wrap in object with 'cards' key
       'Lấy danh sách lá bài thành công'
     ));
   } catch (error) {
@@ -36,14 +37,16 @@ exports.getAllCards = async (req, res, next) => {
  */
 exports.getCard = async (req, res, next) => {
   try {
-    const card = await Card.findById(req.params.id);
-    
+    // Call service function
+    const card = await cardService.getCardById(req.params.id);
+
+    // Service should handle not found error, but controller can double check
     if (!card) {
-      return next(new ApiError('Không tìm thấy lá bài', 404));
+      return next(new ApiError('Không tìm thấy lá bài', 404)); // Keep this check just in case
     }
-    
+
     res.status(200).json(ApiResponse.success(
-      card,
+      { card }, // Wrap in object with 'card' key
       'Lấy thông tin lá bài thành công'
     ));
   } catch (error) {
@@ -59,11 +62,11 @@ exports.getCard = async (req, res, next) => {
 exports.getCardsByDeck = async (req, res, next) => {
   try {
     const { deckName } = req.params;
-    // Use case-insensitive regex
-    const cards = await Card.find({ deck: { $regex: new RegExp(`^${deckName}$`, 'i') } });
-    
+    // Call service function
+    const cards = await cardService.getCardsByDeck(deckName);
+
     res.status(200).json(ApiResponse.success(
-      cards,
+      { cards }, // Wrap in object with 'cards' key
       `Lấy danh sách lá bài từ bộ ${deckName} thành công`
     ));
   } catch (error) {
@@ -81,11 +84,11 @@ exports.getCardsByType = async (req, res, next) => {
     const { cardType } = req.params;
     // Call the service function
     const cards = await cardService.getCardsByType(cardType);
-    
-    // Service handles the 'not found' error
-    
+
+    // Service handles the 'not found' error, controller returns success with potentially empty array
+
     res.status(200).json(ApiResponse.success(
-      cards, // Service returns the found cards
+      { cards }, // Wrap in object with 'cards' key
       `Lấy danh sách lá bài loại ${cardType} thành công`
     ));
   } catch (error) {
@@ -102,9 +105,9 @@ exports.createCard = async (req, res, next) => {
   try {
     // Call the service function
     const newCard = await cardService.createCard(req.body);
-    
+
     res.status(201).json(ApiResponse.success(
-      newCard, // Service returns the created card
+      { card: newCard }, // Wrap in object with 'card' key
       'Tạo lá bài mới thành công',
       201
     ));
@@ -125,11 +128,11 @@ exports.updateCard = async (req, res, next) => {
   try {
     // Call the service function
     const updatedCard = await cardService.updateCard(req.params.id, req.body);
-    
+
     // Service handles the 'not found' error, so no need to check here
-    
+
     res.status(200).json(ApiResponse.success(
-      updatedCard, // Service returns the updated card
+      { card: updatedCard }, // Wrap in object with 'card' key
       'Cập nhật lá bài thành công'
     ));
   } catch (error) {

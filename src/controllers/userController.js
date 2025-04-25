@@ -45,10 +45,15 @@ exports.register = async (req, res, next) => {
       password
     });
 
-    // Tạo token và trả về response
-    sendToken(user, 201, res);
+    // Tạo refresh token mới và lưu vào DB
+    const refreshToken = user.getRefreshToken();
+    user.refreshToken = refreshToken;
+    await user.save(); // Lưu user với refresh token
+
+    // Tạo access token và trả về response cùng refresh token
+    sendToken(user, 201, res, refreshToken); // Truyền refresh token
   } catch (error) {
-    next(error);
+    next(error); // Bắt lỗi từ User.create hoặc user.save
   }
 };
 

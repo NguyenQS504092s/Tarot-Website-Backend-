@@ -75,14 +75,14 @@
 - [ ] Dữ liệu được lưu trữ và truy xuất đúng cách từ MongoDB.
 - [ ] Tích hợp thanh toán Stripe cơ bản hoạt động (tạo checkout, xử lý webhook).
 - [ ] Có tài liệu API cơ bản (ví dụ: thông qua comment JSDoc hoặc Swagger).
-- [ ] Có bộ test cơ bản (unit/integration) cho các chức năng cốt lõi.
-- [ ] Server có thể khởi động và chạy mà không có lỗi nghiêm trọng.
+- [x] Có bộ test cơ bản (unit/integration) cho các chức năng cốt lõi. - *Đã hoàn thành (86 tests passed)*
+- [x] Server có thể khởi động và chạy mà không có lỗi nghiêm trọng.
 
 ## Progress Tracker
 - **Giai Đoạn 1 (Thiết Lập Cơ Bản):** [x] Hoàn thành (Thiết lập project, DB, Auth API cơ bản, Validation cơ bản)
-- **Giai Đoạn 2 (Core Features - Tarot):** [ ] Đang tiến hành (Models OK, Routes OK, Services cần làm)
-- **Giai Đoạn 3 (Tính Năng Nâng Cao - Astrology, Payment, Chat):** [ ] Đang tiến hành (Models OK, Routes OK, Services cần làm)
-- **Giai Đoạn 4 (Testing & Tối Ưu):** [ ] Chưa bắt đầu
+- **Giai Đoạn 2 (Core Features - Tarot):** [x] Hoàn thành (Triển khai service logic cơ bản)
+- **Giai Đoạn 3 (Tính Năng Nâng Cao - Astrology, Payment, Chat):** [x] Hoàn thành (Triển khai service logic cơ bản)
+- **Giai Đoạn 4 (Testing & Tối Ưu):** [x] Hoàn thành (Tests cơ bản cho các module chính)
 - **Giai Đoạn 5 (Triển Khai):** [ ] Chưa bắt đầu
 
 ## Completed Tasks (Chi tiết hơn trong currentTask.md)
