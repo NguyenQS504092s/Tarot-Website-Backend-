@@ -16,10 +16,12 @@ const cardRoutes = require('./routes/cardRoutes');
 const readingRoutes = require('./routes/readingRoutes');
 const astrologyRoutes = require('./routes/astrologyRoutes');
 const chatRoutes = require('./routes/chatRoutes');
-const paymentRoutes = require('./routes/paymentRoutes');
+// const paymentRoutes = require('./routes/paymentRoutes'); // Tạm thời vô hiệu hóa
 
 // Import middleware
 const errorMiddleware = require('./middlewares/errorMiddleware');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./config/swagger'); // Import Swagger config
 
 // Initialize express app
 const app = express();
@@ -54,7 +56,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Special handling for Stripe webhooks (raw body needed)
-app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
+// app.use('/api/payments/webhook', express.raw({ type: 'application/json' })); // Tạm thời vô hiệu hóa
 
 // Routes
 app.use('/api/users', userRoutes);
@@ -62,7 +64,7 @@ app.use('/api/cards', cardRoutes);
 app.use('/api/readings', readingRoutes);
 app.use('/api/astrology', astrologyRoutes); // Sửa prefix
 app.use('/api/chats', chatRoutes);
-app.use('/api/payments', paymentRoutes);
+// app.use('/api/payments', paymentRoutes); // Tạm thời vô hiệu hóa
 
 // Default route
 app.get('/', (req, res) => {
@@ -71,11 +73,15 @@ app.get('/', (req, res) => {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.status(200).json({ 
+  res.status(200).json({
     status: 'UP',
     timestamp: new Date().toISOString()
   });
 });
+
+// Swagger UI setup
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+logger.info(`Swagger UI available at /api-docs`);
 
 // Handle 404 - Route not found
 app.use((req, res, next) => {

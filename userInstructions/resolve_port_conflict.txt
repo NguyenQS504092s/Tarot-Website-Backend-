@@ -1,0 +1,45 @@
+Hướng dẫn khắc phục lỗi "port is already allocated" cho cổng 5000 khi chạy Docker Compose:
+
+**Nguyên nhân:** Cổng 5000 trên máy tính của bạn đang được sử dụng bởi một ứng dụng hoặc dịch vụ khác. Docker không thể ánh xạ cổng 5000 của container `tarot-backend` vào cổng này.
+
+**Cách 1: Tìm và dừng tiến trình đang sử dụng cổng 5000 (Khuyến nghị nếu tiến trình không quan trọng)**
+
+1.  Mở PowerShell với quyền Administrator.
+2.  Chạy lệnh sau để tìm Process ID (PID) của tiến trình đang sử dụng cổng 5000:
+    ```powershell
+    Get-Process -Id (Get-NetTCPConnection -LocalPort 5000).OwningProcess
+    ```
+    Lệnh này sẽ hiển thị thông tin về tiến trình đó. Ghi lại giá trị `Id` (PID).
+3.  Nếu bạn xác định tiến trình đó có thể dừng an toàn (ví dụ: một server dev cũ đang chạy), hãy chạy lệnh sau để dừng nó (thay `<PID>` bằng ID bạn tìm được ở bước 2):
+    ```powershell
+    Stop-Process -Id <PID> -Force
+    ```
+4.  Sau khi dừng tiến trình, hãy thử chạy lại lệnh `docker-compose up --build` trong terminal của VS Code.
+
+**Cách 2: Thay đổi cổng ánh xạ trên máy host**
+
+Nếu bạn không muốn dừng tiến trình đang chạy hoặc cần nó hoạt động song song, bạn có thể thay đổi cổng trên máy host mà Docker sẽ ánh xạ tới.
+
+1.  Mở file `docker-compose.yml`.
+2.  Tìm đến phần `ports` của service `tarot-backend`:
+    ```yaml
+    ports:
+      - "${PORT:-5000}:5000" 
+    ```
+3.  Thay đổi phần cổng của host (phần trước dấu hai chấm `:`). Ví dụ, đổi thành cổng 5001:
+    ```yaml
+    ports:
+      - "${PORT:-5001}:5000" # Đổi cổng host thành 5001
+    ```
+    *Lưu ý: Đảm bảo cổng mới (ví dụ: 5001) cũng chưa được sử dụng.*
+4.  Lưu file `docker-compose.yml`.
+5.  Chạy lại lệnh `docker-compose up --build` trong terminal của VS Code.
+6.  Nếu bạn chọn cách này, hãy nhớ truy cập ứng dụng qua cổng mới (ví dụ: `http://localhost:5001` thay vì `http://localhost:5000`).
+
+**Sau khi thực hiện một trong hai cách trên, hãy chạy lại:**
+
+```bash
+docker-compose up --build 
+```
+
+Nếu không còn lỗi "port is already allocated", ứng dụng backend sẽ khởi động thành công trong Docker.

@@ -193,4 +193,19 @@
 - [x] Run tests for Module 4 Admin Zodiac CRUD - All passed.
 - [x] **Testing Module 4 (Admin Zodiac CRUD) Completed.**
 - [x] **Phase 4: Testing & Optimization - All tests passed.**
-- [ ] Await next task from user.
+- [ ] **Start Phase 5: Deployment (Using Docker)**
+- [x] Create `.dockerignore` file.
+- [x] Create `Dockerfile` for the backend application.
+- [x] Create `docker-compose.yml` for managing services (backend, DB).
+- [ ] Temporarily disable Stripe integration (due to missing secrets):
+  - [x] Comment out Stripe env var checks in `src/server.js`.
+  - [x] Comment out payment routes and webhook middleware in `src/app.js`.
+- [x] Update `projectRoadmap.md` to reflect postponed payment module.
+- [x] Build and run the application using Docker Compose (attempt 2).
+- [x] Verify application is running correctly in Docker container (MongoDB running, backend connected and API responding).
+- [ ] **Implement API Documentation (Swagger)**
+- [ ] Install `swagger-jsdoc` and `swagger-ui-express`.
+- [ ] Configure Swagger options in a new file (e.g., `src/config/swagger.js`).
+- [ ] Integrate Swagger UI middleware into `src/app.js`.
+- [x] Add basic JSDoc comments to User routes/controllers for initial testing.
+- [x] Verify Swagger UI is accessible at `/api-docs`.

@@ -48,16 +48,21 @@
 - [x] Chức năng CRUD cho Horoscope (Admin) - *Đã triển khai*
 - [x] Chức năng CRUD cho Zodiac (Admin) - *Đã triển khai*
 
-### Module 5: Thanh Toán (Ưu tiên trung bình)
-- [x] Model `SubscriptionPlan`, `Payment`, `UserSubscription`
-- [x] API Lấy danh sách gói (`/payments/plans`)
-- [x] API Lấy chi tiết gói (`/payments/plans/:id`)
-- [x] API Tạo checkout session (`/payments/create-checkout-session`)
-- [x] API Xử lý webhook Stripe (`/payments/webhook`) - *Đã xem xét, tái cấu trúc và thêm idempotency*
-- [x] API Lấy subscription hiện tại (`/payments/subscription`)
-- [x] API Hủy subscription (`/payments/cancel-subscription`)
-- [x] API Lấy lịch sử thanh toán (`/payments/payment-history`)
-- [x] Chức năng CRUD cho SubscriptionPlan (Admin) - *Đã triển khai*
+### Module 5: Thanh Toán (Tạm hoãn - Stripe)
+*Ghi chú: Tạm thời vô hiệu hóa do thiếu Stripe secrets. Để kích hoạt lại:*
+  *- Bỏ comment kiểm tra biến môi trường Stripe trong `src/server.js`.*
+  *- Bỏ comment các dòng liên quan đến `paymentRoutes` và webhook trong `src/app.js`.*
+  *- Cung cấp `STRIPE_SECRET_KEY` và `STRIPE_WEBHOOK_SECRET` trong file `.env`.*
+
+- [ ] Model `SubscriptionPlan`, `Payment`, `UserSubscription` (Đã tạo, cần xem xét lại khi tích hợp)
+- [ ] API Lấy danh sách gói (`/payments/plans`) (Tạm hoãn)
+- [ ] API Lấy chi tiết gói (`/payments/plans/:id`) (Tạm hoãn)
+- [ ] API Tạo checkout session (`/payments/create-checkout-session`) (Tạm hoãn)
+- [ ] API Xử lý webhook Stripe (`/payments/webhook`) (Tạm hoãn)
+- [ ] API Lấy subscription hiện tại (`/payments/subscription`) (Tạm hoãn)
+- [ ] API Hủy subscription (`/payments/cancel-subscription`) (Tạm hoãn)
+- [ ] API Lấy lịch sử thanh toán (`/payments/payment-history`) (Tạm hoãn)
+- [ ] Chức năng CRUD cho SubscriptionPlan (Admin) (Tạm hoãn)
 
 ### Module 6: Hệ Thống Trò Chuyện (Ưu tiên thấp)
 - [x] Model `Chat`, `Message` (đã tạo Message model)
@@ -73,17 +78,17 @@
 - [ ] Tất cả các API trong phần "Key Features (MVP)" được triển khai và hoạt động ổn định.
 - [ ] Hệ thống xác thực và phân quyền hoạt động chính xác.
 - [ ] Dữ liệu được lưu trữ và truy xuất đúng cách từ MongoDB.
-- [ ] Tích hợp thanh toán Stripe cơ bản hoạt động (tạo checkout, xử lý webhook).
+- [ ] Tích hợp thanh toán Stripe cơ bản hoạt động (tạo checkout, xử lý webhook). (Tạm hoãn)
 - [ ] Có tài liệu API cơ bản (ví dụ: thông qua comment JSDoc hoặc Swagger).
-- [x] Có bộ test cơ bản (unit/integration) cho các chức năng cốt lõi. - *Đã hoàn thành (86 tests passed)*
+- [x] Có bộ test cơ bản (unit/integration) cho các chức năng cốt lõi. - *Đã hoàn thành (86 tests passed, trừ Payment)*
 - [x] Server có thể khởi động và chạy mà không có lỗi nghiêm trọng.
 
 ## Progress Tracker
 - **Giai Đoạn 1 (Thiết Lập Cơ Bản):** [x] Hoàn thành (Thiết lập project, DB, Auth API cơ bản, Validation cơ bản)
 - **Giai Đoạn 2 (Core Features - Tarot):** [x] Hoàn thành (Triển khai service logic cơ bản)
-- **Giai Đoạn 3 (Tính Năng Nâng Cao - Astrology, Payment, Chat):** [x] Hoàn thành (Triển khai service logic cơ bản)
-- **Giai Đoạn 4 (Testing & Tối Ưu):** [x] Hoàn thành (Tests cơ bản cho các module chính)
-- **Giai Đoạn 5 (Triển Khai):** [ ] Chưa bắt đầu
+- **Giai Đoạn 3 (Tính Năng Nâng Cao - Astrology, Payment, Chat):** [x] Hoàn thành (Triển khai service logic cơ bản, Payment tạm hoãn)
+- **Giai Đoạn 4 (Testing & Tối Ưu):** [x] Hoàn thành (Tests cơ bản cho các module chính, trừ Payment)
+- **Giai Đoạn 5 (Triển Khai):** [ ] Đang thực hiện (Docker setup)
 
 ## Completed Tasks (Chi tiết hơn trong currentTask.md)
 - Thiết lập cấu trúc dự án ban đầu.

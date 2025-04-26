@@ -31,7 +31,9 @@
     "stripe": "^14.20.0",
     "validator": "^13.11.0",
     "winston": "^3.11.0",
-    "winston-daily-rotate-file": "^5.0.0"
+    "winston-daily-rotate-file": "^5.0.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "cross-env": "^7.0.3",

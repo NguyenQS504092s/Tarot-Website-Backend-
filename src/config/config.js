@@ -1,7 +1,7 @@
 // Cấu hình chính của ứng dụng
 const config = {
   env: process.env.NODE_ENV || 'development',
-  port: process.env.PORT || 5000,
+  port: process.env.PORT || 5005, // Đổi port mặc định thành 5005
   
   // Các giá trị mặc định cho biến môi trường
   jwtSecret: process.env.JWT_SECRET, // Không còn fallback value nữa
