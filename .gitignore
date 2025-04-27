@@ -11,6 +11,7 @@ jspm_packages/
 
 # Logs
 logs
+logs/ # Ignore the specific log directory with special character
 *.log
 npm-debug.log*
 yarn-debug.log*
