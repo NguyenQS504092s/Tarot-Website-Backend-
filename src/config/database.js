@@ -20,7 +20,8 @@ const connectDB = async () => {
     return conn;
   } catch (error) {
     logger.error(`Lỗi kết nối MongoDB: ${error.message}`);
-    process.exit(1);
+    // process.exit(1); // Don't exit abruptly, let the caller handle it
+    throw error; // Throw the error so Jest/beforeAll can catch it
   }
 };
 

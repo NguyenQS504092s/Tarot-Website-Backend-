@@ -2,7 +2,7 @@
  * Chat Service - Xử lý logic liên quan đến trò chuyện và tin nhắn
  */
 const Chat = require('../models/chatModel');
-const Message = require('../models/messageModel');
+// const Message = require('../models/messageModel'); // Removed unused import
 const User = require('../models/userModel');
 const ApiError = require('../utils/apiError');
 const mongoose = require('mongoose');
@@ -97,27 +97,31 @@ exports.sendMessage = async (chatId, senderId, content) => {
     //   }
     // }
 
-    // Tạo tin nhắn mới
-    const newMessage = await Message.create({
-      chatId,
-      sender: senderId,
-      content: content.trim(),
-      readBy: [senderId] // Sender automatically reads their own message
-    });
+    // Sử dụng instance method của Chat model để thêm tin nhắn vào mảng nhúng
+    // Lưu ý: addMessage không tự save, cần gọi chat.save() sau đó.
+    // Chúng ta sẽ thêm tin nhắn và cập nhật trạng thái trước khi lưu.
+    const messageData = {
+        sender: senderId,
+        content: content.trim(),
+        contentType: 'text', // Giả định là text, có thể mở rộng sau
+        isRead: false // Tin nhắn mới chưa được đọc bởi người nhận
+    };
+    chat.messages.push(messageData);
+    chat.lastMessage = new Date(); // Cập nhật thời gian tin nhắn cuối cùng
 
-    // Cập nhật lastMessage và trạng thái chat (nếu cần)
-    chat.lastMessage = newMessage._id;
     if (chat.status === 'pending') {
-        chat.status = 'active'; // Activate chat on first message
+        chat.status = 'active'; // Kích hoạt chat khi có tin nhắn đầu tiên
     }
-    // Reset unread counts or handle notifications here if needed
 
+    // Lưu thay đổi vào chat document
     await chat.save();
 
-    console.log(`Chat Service: Sent message in chat ${chatId} by ${senderId}`);
-    // Populate sender info for the response if needed, or handle in controller
-    // await newMessage.populate('sender', 'name role');
-    return newMessage;
+    // Lấy tin nhắn vừa được thêm (tin nhắn cuối cùng trong mảng) để trả về
+    // Lưu ý: Tin nhắn này chưa được populate sender
+    const newMessage = chat.messages[chat.messages.length - 1];
+
+    console.log(`Chat Service: Added message to chat ${chatId} by ${senderId}`);
+    return newMessage; // Trả về object tin nhắn vừa thêm (chưa populate)
 
   } catch (error) {
     if (error instanceof ApiError) {
@@ -163,19 +167,33 @@ exports.getChatMessages = async (chatId, userId, options = {}) => {
       throw new ApiError('Bạn không có quyền truy cập cuộc trò chuyện này', 403);
     }
 
-    // Lấy tin nhắn và tổng số tin nhắn
-    const totalMessages = await Message.countDocuments({ chatId });
-    const messages = await Message.find({ chatId })
-      .populate('sender', 'name role') // Populate sender info
-      .sort({ createdAt: -1 }) // Lấy mới nhất trước
-      .skip(skip)
-      .limit(limit);
+    // Lấy tổng số tin nhắn từ mảng nhúng
+    const totalMessages = chat.messages.length;
+
+    // Thực hiện phân trang trên mảng messages nhúng
+    // Sắp xếp theo thời gian tạo (mới nhất trước) để lấy đúng trang
+    const sortedMessages = chat.messages.sort((a, b) => b.createdAt - a.createdAt);
+    const paginatedMessages = sortedMessages.slice(skip, skip + limit);
+
+    // Populate thông tin người gửi cho các tin nhắn trong trang hiện tại
+    // Cần thực hiện populate thủ công vì chúng ta đang làm việc với mảng con
+    const populatedMessages = await Promise.all(paginatedMessages.map(async (msg) => {
+        // Chỉ populate nếu sender tồn tại (không phải tin nhắn hệ thống)
+        if (msg.sender) {
+            const senderInfo = await User.findById(msg.sender).select('name role').lean(); // lean() để lấy object thuần
+            // Trả về object tin nhắn mới với sender đã populate
+            // Cần chuyển đổi msg thành object thuần nếu nó là Mongoose subdocument
+            const msgObject = msg.toObject ? msg.toObject() : { ...msg };
+            return { ...msgObject, sender: senderInfo };
+        }
+        return msg.toObject ? msg.toObject() : { ...msg }; // Trả về object thuần cho tin nhắn hệ thống
+    }));
 
     // Đảo ngược lại để hiển thị theo thứ tự thời gian tăng dần trên trang hiện tại
-    const reversedMessages = messages.reverse();
+    const reversedMessages = populatedMessages.reverse();
 
     return {
-      messages: reversedMessages,
+      messages: reversedMessages, // Trả về tin nhắn đã populate sender
       currentPage: page,
       totalPages: Math.ceil(totalMessages / limit),
       totalMessages,
@@ -219,25 +237,28 @@ exports.markChatAsRead = async (chatId, userId) => {
              throw new ApiError('Bạn không có quyền đánh dấu đã đọc cho cuộc trò chuyện này', 403);
          }
      }
+    // Tìm các tin nhắn trong chat này mà người gửi không phải là userId và isRead là false
+    let updateCount = 0;
+    let modified = false;
+    chat.messages.forEach(message => {
+        // Chỉ đánh dấu đã đọc cho tin nhắn của người khác và chưa được đọc
+        if (message.sender && message.sender.toString() !== userId.toString() && !message.isRead) {
+            message.isRead = true;
+            updateCount++;
+            modified = true;
+        }
+    });
 
+    // Chỉ lưu lại nếu có thay đổi
+    if (modified) {
+        await chat.save();
+        console.log(`Chat Service: Marked ${updateCount} messages as read by ${userId} in chat ${chatId}.`);
+    } else {
+        console.log(`Chat Service: No new messages to mark as read by ${userId} in chat ${chatId}.`);
+    }
 
-    // Cập nhật tất cả tin nhắn trong chat chưa được đọc bởi user này
-    // Thêm userId vào mảng readBy nếu chưa có
-    const updateResult = await Message.updateMany(
-      {
-        chatId: chatId,
-        sender: { $ne: userId }, // Don't mark own messages as unread needing marking
-        readBy: { $ne: userId } // Chỉ cập nhật những tin nhắn chưa có userId trong readBy
-      },
-      {
-        $addToSet: { readBy: userId } // $addToSet đảm bảo không thêm trùng lặp
-      }
-    );
-
-    console.log(`Chat Service: Marked messages as read by ${userId} in chat ${chatId}. Updated count: ${updateResult.modifiedCount}`);
-
-    // Trả về số lượng tin nhắn đã được cập nhật
-    return updateResult.modifiedCount;
+    // Trả về số lượng tin nhắn đã được cập nhật trạng thái đọc
+    return updateCount;
 
   } catch (error) {
     if (error instanceof ApiError) {
@@ -287,29 +308,31 @@ exports.scheduleChat = async (userId, readerId, scheduledTime, title, initialQue
       isActive: true // Scheduled chats are active until completed/canceled
     });
 
-    // Thêm tin nhắn hệ thống (không lưu chat ở đây)
-    newChat.addSystemMessage(`Cuộc trò chuyện đã được lên lịch cho ${scheduleDate.toLocaleString('vi-VN')}`);
+    // Thêm tin nhắn hệ thống (không lưu chat ở đây, sẽ lưu cùng tin nhắn ban đầu hoặc riêng)
+    const systemMessageData = {
+        sender: null, // Tin nhắn hệ thống không có sender cụ thể
+        content: `Cuộc trò chuyện đã được lên lịch cho ${scheduleDate.toLocaleString('vi-VN')}`,
+        contentType: 'system',
+        isRead: false // Tin nhắn hệ thống cũng cần được đọc
+    };
+    newChat.messages.push(systemMessageData);
+    newChat.lastMessage = new Date(); // Cập nhật lastMessage
 
-    // Thêm câu hỏi ban đầu nếu có (không lưu chat ở đây)
-    if (initialQuestion && initialQuestion.trim() !== '') {
-      // Note: addMessage now requires saving the chat afterwards
-      // We'll create the message separately after saving the chat
-    }
-
-    // Lưu chat trước
+    // Lưu chat với tin nhắn hệ thống trước
     await newChat.save();
 
-    // Nếu có câu hỏi ban đầu, tạo tin nhắn sau khi chat đã có ID
+    // Nếu có câu hỏi ban đầu, thêm nó vào mảng messages và lưu lại chat
     if (initialQuestion && initialQuestion.trim() !== '') {
-        await Message.create({
-            chatId: newChat._id,
+        const initialMessageData = {
             sender: userId,
             content: `Câu hỏi ban đầu: ${initialQuestion.trim()}`,
-            readBy: [userId]
-        });
-        // Cập nhật lastMessage cho chat (optional, vì tin nhắn hệ thống có thể là cuối cùng)
-        // newChat.lastMessage = initialMessage._id;
-        // await newChat.save();
+            contentType: 'text',
+            isRead: false // Chỉ người gửi đọc ban đầu
+        };
+        newChat.messages.push(initialMessageData);
+        // Cập nhật lastMessage nếu tin nhắn này là mới nhất (thường là vậy)
+        newChat.lastMessage = new Date();
+        await newChat.save(); // Lưu lại chat với tin nhắn ban đầu
     }
 
 

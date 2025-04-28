@@ -175,39 +175,7 @@ router.post('/random', trackPerformance('createRandomReading'), readingControlle
  */
 router.get('/history', trackPerformance('getUserReadingHistory'), readingController.getUserReadingHistory);
 
-/**
- * @swagger
- * /readings/spreads:
- *   get:
- *     summary: Get a list of available Tarot spread types
- *     tags: [Readings]
- *     security:
- *       - bearerAuth: [] # Or make public if spreads are not user-specific
- *     responses:
- *       200:
- *         description: A list of available spread types
- *         content:
- *           application/json:
- *             schema:
- *               allOf:
- *                 - $ref: '#/components/schemas/ApiResponse'
- *                 - type: object
- *                   properties:
- *                     data:
- *                       type: array
- *                       items:
- *                         type: object # Define Spread schema later if needed
- *                         properties:
- *                           key: { type: string, example: 'three-card' }
- *                           name: { type: string, example: 'Three Card Spread' }
- *                           description: { type: string, example: 'Past, Present, Future overview.' }
- *                           cardCount: { type: integer, example: 3 }
- *       401:
- *         description: Unauthorized (if security is applied)
- *       500:
- *         description: Server error
- */
-router.get('/spreads', trackPerformance('getAllSpreads'), readingController.getAllSpreads); // Added trackPerformance
+// Removed deprecated /readings/spreads route (now handled by /api/spreads)
 
 // Routes cho reader
 router.use('/reader', authMiddleware.restrictTo('reader', 'admin')); // Middleware áp dụng cho các route reader bên dưới

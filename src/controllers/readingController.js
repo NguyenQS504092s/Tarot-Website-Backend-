@@ -309,35 +309,10 @@ exports.deleteReading = async (req, res, next) => {
  * @access  Public
  */
 exports.getAllSpreads = async (req, res, next) => {
-  try {
-    // Lấy danh sách các kiểu trải bài được hỗ trợ từ một nguồn đáng tin cậy
-    // (Hiện tại là từ logic trong readingService, sau này có thể từ DB)
-    const supportedSpreads = [
-      {
-        name: "Celtic Cross",
-        description: "Một cách trải bài phổ biến cho các câu hỏi phức tạp.",
-        cardCount: 10 // Số lượng lá bài
-      },
-      {
-        name: "Ba Lá Bài",
-        description: "Cách trải bài đơn giản: quá khứ, hiện tại, tương lai.",
-        cardCount: 3
-      },
-      {
-        name: "Năm Lá Bài",
-        description: "Cách trải bài cho tình hình hiện tại và các hướng phát triển.",
-        cardCount: 5
-      }
-      // Thêm các kiểu trải bài khác nếu có
-    ];
-    
-    res.status(200).json(ApiResponse.success(
-      supportedSpreads,
-      'Lấy danh sách cách trải bài thành công'
-    ));
-  } catch (error) {
-    next(error);
-  }
+  // This function is deprecated as the route is moved to /api/spreads
+  // and handled by spreadController.getAllActiveSpreads.
+  // Return a 410 Gone error to indicate the endpoint has moved.
+  return next(new ApiError('Endpoint /api/readings/spreads đã được chuyển đến /api/spreads', 410)); // 410 Gone
 };
 
 /**

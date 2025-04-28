@@ -193,19 +193,53 @@
 - [x] Run tests for Module 4 Admin Zodiac CRUD - All passed.
 - [x] **Testing Module 4 (Admin Zodiac CRUD) Completed.**
 - [x] **Phase 4: Testing & Optimization - All tests passed.**
-- [ ] **Start Phase 5: Deployment (Using Docker)**
-- [x] Create `.dockerignore` file.
-- [x] Create `Dockerfile` for the backend application.
-- [x] Create `docker-compose.yml` for managing services (backend, DB).
-- [ ] Temporarily disable Stripe integration (due to missing secrets):
-  - [x] Comment out Stripe env var checks in `src/server.js`.
-  - [x] Comment out payment routes and webhook middleware in `src/app.js`.
-- [x] Update `projectRoadmap.md` to reflect postponed payment module.
-- [x] Build and run the application using Docker Compose (attempt 2).
-- [x] Verify application is running correctly in Docker container (MongoDB running, backend connected and API responding).
-- [ ] **Implement API Documentation (Swagger)**
-- [ ] Install `swagger-jsdoc` and `swagger-ui-express`.
-- [ ] Configure Swagger options in a new file (e.g., `src/config/swagger.js`).
-- [ ] Integrate Swagger UI middleware into `src/app.js`.
-- [x] Add basic JSDoc comments to User routes/controllers for initial testing.
-- [x] Verify Swagger UI is accessible at `/api-docs`.
+- [x] **Start Phase 5: Deployment (Using Docker)**
+  - [x] Create `.dockerignore` file.
+  - [x] Create `Dockerfile` for the backend application.
+  - [x] Create `docker-compose.yml` for managing services (backend, DB).
+  - [x] Temporarily disable Stripe integration (due to missing secrets):
+    - [x] Comment out Stripe env var checks in `src/server.js`.
+    - [x] Comment out payment routes and webhook middleware in `src/app.js`.
+  - [x] Update `projectRoadmap.md` to reflect postponed payment module.
+  - [x] Build and run the application using Docker Compose (attempt 2).
+  - [x] Verify application is running correctly in Docker container (MongoDB running, backend connected and API responding).
+  - [x] Optimize `Dockerfile` using multi-stage builds and selective copying.
+  - [x] Rebuild Docker image and verify application runs correctly after optimization.
+  - [x] Document required environment variables in `README.md`.
+  - [x] Configure logging for Docker compatibility (log to console).
+  - [x] Verify graceful shutdown mechanism in `src/server.js`.
+  - [x] Add health check configuration to `docker-compose.yml`.
+  - [x] Restart containers and verify health check status using `docker-compose ps`.
+  - [x] Add "Deployment Considerations" section to `README.md`.
+  - [x] Create basic deployment guide (`userInstructions/deployment_guide.md`).
+- [x] **Start Phase 6: Codebase Cleanup & Refactoring**
+  - [x] Review and refactor configuration files (`src/config/`). (No changes needed)
+  - [x] Review and refactor utility functions (`src/utils/`). (Minor JSDoc update)
+  - [x] Review and refactor middleware (`src/middlewares/`). (No changes needed)
+  - [x] Review and refactor models (`src/models/`). (Removed redundant messageModel.js)
+  - [x] Review and refactor services (`src/services/`). (Refactored chatService for embedded messages)
+  - [x] Review and refactor controllers (`src/controllers/`). (No major changes needed)
+- [x] **Implement API Documentation (Swagger)**
+  - [x] Install `swagger-jsdoc` and `swagger-ui-express`. (Done previously)
+  - [x] Configure Swagger options in `src/config/swagger.js`. (Done previously)
+  - [x] Integrate Swagger UI middleware into `src/app.js`. (Done previously)
+  - [x] Add JSDoc comments to all main routes (User, Card, Reading, Astrology, Chat). (Confirmed done)
+  - [x] Verify Swagger UI is accessible and functional. (Confirmed working at localhost:5005)
+- [x] **Implement Spread Management Module (Module 3)**
+  - [x] Add `spreadModel.js`.
+  - [x] Create `spreadService.js` with CRUD operations.
+  - [x] Implement `spreadController.js` and `spreadRoutes.js`.
+  - [x] Update `readingService.js` to use `spreadModel`.
+  - [x] Deprecate old `/api/readings/spreads` route.
+  - [x] Add `spreadValidators.js` for input validation.
+  - [x] Apply validators to `spreadRoutes.js`.
+  - [x] Create `scripts/seedSpreads.js` for initial data.
+  - [x] Add `seed:spreads` script to `package.json`.
+  - [x] Run seeding script successfully.
+- [x] **Write Tests for Spread Module (Module 3)**
+  - [x] Create `src/tests/spread.test.js`.
+  - [x] Add test setup (DB, tokens, seed data).
+  - [x] Write tests for public API (`GET /api/spreads`).
+  - [x] Write tests for admin APIs (CRUD, validation, RBAC).
+  - [x] Run all tests (`npm test`) - All passed.
+- [ ] **Await further instructions or proceed with final deployment preparations.**

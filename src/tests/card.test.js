@@ -1,5 +1,5 @@
 const request = require('supertest');
-require('dotenv').config();
+// dotenv should be handled by cross-env in npm script
 const app = require('../app');
 const mongoose = require('mongoose');
 const Card = require('../models/cardModel');

@@ -1,6 +1,5 @@
 const request = require('supertest');
-// Import dotenv and configure it at the top
-require('dotenv').config(); // Load .env variables
+// dotenv should be handled by cross-env in npm script
 const app = require('../app'); // Import Express app
 const mongoose = require('mongoose');
 const User = require('../models/userModel');

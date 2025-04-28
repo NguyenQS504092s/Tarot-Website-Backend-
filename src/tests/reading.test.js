@@ -1,12 +1,13 @@
 const request = require('supertest');
-require('dotenv').config();
+// dotenv should be handled by cross-env in npm script
 const app = require('../app');
 const mongoose = require('mongoose');
 const Reading = require('../models/readingModel');
 const User = require('../models/userModel');
-const Card = require('../models/cardModel'); // Needed for card IDs
+const Card = require('../models/cardModel');
+const Spread = require('../models/spreadModel'); // Import Spread model
 const { connectDB, closeDB } = require('../config/database');
-const Zodiac = require('../models/zodiacModel'); // Import other models for cleanup
+const Zodiac = require('../models/zodiacModel');
 const Horoscope = require('../models/horoscopeModel');
 
 let regularUserToken;
@@ -34,10 +35,41 @@ beforeAll(async () => {
     await Horoscope.deleteMany({});
     await Card.deleteMany({});
     await Reading.deleteMany({});
+    await Spread.deleteMany({}); // Clear spreads as well
 
     // Seed cards specific to reading tests
     const createdCards = await Card.insertMany(sampleCardDataForReading);
     sampleCardIds = createdCards.map(card => card._id.toString());
+
+    // Seed necessary Spreads
+    await Spread.insertMany([
+        {
+            name: "Ba Lá Bài",
+            description: "Trải bài 3 lá cơ bản.",
+            cardCount: 3,
+            positions: [
+                { positionNumber: 1, name: "Quá khứ", meaning: "Ảnh hưởng quá khứ" },
+                { positionNumber: 2, name: "Hiện tại", meaning: "Tình hình hiện tại" },
+                { positionNumber: 3, name: "Tương lai", meaning: "Kết quả hoặc xu hướng tương lai" }
+            ],
+            isActive: true // Ensure it's active for tests
+        },
+        {
+            name: "Celtic Cross",
+            description: "Trải bài Celtic Cross 10 lá.",
+            cardCount: 10,
+            positions: [ /* ... define 10 positions ... */ ], // Add positions if needed for other tests
+            isActive: true // Ensure it's active
+        },
+         {
+            name: "Spread Không Hoạt Động",
+            description: "Dùng để test.",
+            cardCount: 1,
+            positions: [{ positionNumber: 1, name: "Test", meaning: "Test" }],
+            isActive: false // Ensure it's inactive
+        }
+    ]);
+
 
     // Create and login regular user
     const regularUserData = { name: 'Reading User', email: `user_${Date.now()}@readingtest.com`, password: 'password', role: 'user' };
@@ -77,19 +109,28 @@ describe('Reading API (/api/readings)', () => {
     let createdReadingId; // To store ID of reading created by user
 
     // Test GET /spreads - Lấy danh sách các kiểu trải bài (Requires Auth)
-    it('GET /spreads - should return available spread types', async () => {
+    it('GET /api/spreads - should return available spread types', async () => { // Sửa tên test và route
         expect(regularUserToken).toBeDefined(); // Ensure user is logged in
         const res = await request(app)
-            .get('/api/readings/spreads')
-            .set('Authorization', `Bearer ${regularUserToken}`); // Add auth header
+            .get('/api/spreads') // Sửa route thành /api/spreads
+            .set('Authorization', `Bearer ${regularUserToken}`); // Vẫn cần auth nếu route /api/spreads yêu cầu
 
-        expect(res.statusCode).toEqual(200);
+        // Route /api/spreads không yêu cầu auth, nên không cần set header
+        // const res = await request(app).get('/api/spreads');
+
+        expect(res.statusCode).toEqual(200); // Route /api/spreads trả về 200
         expect(res.body).toHaveProperty('success', true);
         expect(res.body).toHaveProperty('data');
-        expect(Array.isArray(res.body.data)).toBe(true); // Data itself is the array
+        // Dữ liệu trả về từ /api/spreads nằm trực tiếp trong data
+        expect(Array.isArray(res.body.data)).toBe(true); 
         // Check for specific known spreads by name within the array of objects
         expect(res.body.data.map(spread => spread.name)).toEqual(
-            expect.arrayContaining(['Ba Lá Bài', 'Celtic Cross'])
+            // Only active spreads should be returned
+            expect.arrayContaining(['Ba Lá Bài', 'Celtic Cross']) 
+        );
+         // Ensure inactive spread is NOT returned
+        expect(res.body.data.map(spread => spread.name)).not.toEqual(
+            expect.arrayContaining(['Spread Không Hoạt Động'])
         );
     });
 
@@ -167,7 +208,8 @@ describe('Reading API (/api/readings)', () => {
         expect(res.statusCode).toEqual(400); // Expecting error from service/controller
         expect(res.body).toHaveProperty('success', false);
         expect(res.body).toHaveProperty('message');
-        expect(res.body.message).toMatch(/Không hỗ trợ kiểu trải bài/);
+        // Adjust regex slightly to be more robust or match exact message if preferred
+        expect(res.body.message).toMatch(/Kiểu trải bài không hợp lệ hoặc không hoạt động/i); 
     });
 
      // Test POST / - Lỗi khi chưa đăng nhập

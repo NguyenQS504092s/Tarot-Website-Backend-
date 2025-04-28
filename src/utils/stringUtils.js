@@ -13,12 +13,14 @@ const normalizeString = (str) => {
 };
 
 /**
- * Lấy danh sách các giá trị enum từ schema Mongoose.
- * @param {mongoose.Schema} schema Schema Mongoose
- * @param {string} path Đường dẫn đến trường có enum
- * @returns {Array<string>|null} Mảng các giá trị enum hoặc null nếu không tìm thấy
+ * Lấy danh sách các giá trị enum từ một trường cụ thể trong schema Mongoose.
+ * Hỗ trợ lấy enum từ trường trực tiếp hoặc trường lồng trong một mảng (ví dụ: 'arrayField.enumField').
+ * @param {mongoose.Schema} schema - Schema Mongoose cần kiểm tra.
+ * @param {string} path - Đường dẫn đến trường chứa enum (ví dụ: 'status', 'items.type').
+ * @returns {Array<string>|null} - Mảng các giá trị enum hợp lệ, hoặc null nếu trường không tồn tại hoặc không phải là enum.
  */
 const getEnumValues = (schema, path) => {
+  // Thử lấy trực tiếp từ đường dẫn
   const schemaPath = schema.path(path);
   if (schemaPath && schemaPath.enumValues) {
     return schemaPath.enumValues;

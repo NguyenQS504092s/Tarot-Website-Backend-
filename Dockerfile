@@ -20,9 +20,11 @@ WORKDIR /app
 # Copy dependencies from the builder stage
 COPY --from=builder /app/node_modules ./node_modules
 
-# Copy the rest of the application code
-# Copy application code first
-COPY . .
+# Copy package files (needed for metadata, even if modules are copied)
+COPY package*.json ./
+
+# Copy only the application source code needed for runtime
+COPY src ./src
 
 # Create log directory explicitly and set permissions
 # Ensure the node user can write logs

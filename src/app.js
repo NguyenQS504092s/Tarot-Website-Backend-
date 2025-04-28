@@ -16,6 +16,7 @@ const cardRoutes = require('./routes/cardRoutes');
 const readingRoutes = require('./routes/readingRoutes');
 const astrologyRoutes = require('./routes/astrologyRoutes');
 const chatRoutes = require('./routes/chatRoutes');
+const spreadRoutes = require('./routes/spreadRoutes'); // Restore spread routes
 // const paymentRoutes = require('./routes/paymentRoutes'); // Tạm thời vô hiệu hóa
 
 // Import middleware
@@ -64,6 +65,7 @@ app.use('/api/cards', cardRoutes);
 app.use('/api/readings', readingRoutes);
 app.use('/api/astrology', astrologyRoutes); // Sửa prefix
 app.use('/api/chats', chatRoutes);
+app.use('/api/spreads', spreadRoutes); // Restore spread routes
 // app.use('/api/payments', paymentRoutes); // Tạm thời vô hiệu hóa
 
 // Default route

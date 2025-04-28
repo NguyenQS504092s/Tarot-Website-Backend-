@@ -34,10 +34,11 @@
 - [x] API Tạo lần đọc bài mới (`/readings`) - *Service logic cơ bản đã có*
 - [x] API Lấy kết quả đọc bài (`/readings/:id`)
 - [x] API Lấy lịch sử đọc bài (`/readings/history`)
-- [x] API Lấy danh sách các kiểu trải bài (`/readings/spreads`) - *Đã có danh sách cứng*
+- [x] API Lấy danh sách các kiểu trải bài (`/api/spreads`) - *Đã chuyển sang module Spread*
 - [x] API Thêm giải nghĩa (Reader) (`/readings/reader/:id/interpret`) - *Service logic đã có*
 - [x] API Thêm feedback (User) (`/readings/:id/feedback`) - *Service logic đã có*
 - [x] Chức năng CRUD cho Reading (Admin) - *Đã triển khai R/U/D*
+- [x] Quản lý Kiểu Trải Bài (Spreads) bằng DB (Admin CRUD & Tests) - *Hoàn thành*
 
 ### Module 4: Tích Hợp Astrology (Ưu tiên trung bình)
 - [x] Model `Zodiac`, `Horoscope`
@@ -65,7 +66,7 @@
 - [ ] Chức năng CRUD cho SubscriptionPlan (Admin) (Tạm hoãn)
 
 ### Module 6: Hệ Thống Trò Chuyện (Ưu tiên thấp)
-- [x] Model `Chat`, `Message` (đã tạo Message model)
+- [x] Model `Chat`, `Message` (đã tạo Message model, sau đó refactor vào Chat)
 - [x] API Lấy danh sách chat của user (`/chats`)
 - [x] API Tạo chat mới (`/chats`) - *Đã triển khai service logic*
 - [x] API Gửi tin nhắn (`/chats/:id/messages`) - *Đã triển khai service logic*
@@ -76,19 +77,20 @@
 
 ## Completion Criteria (MVP)
 - [ ] Tất cả các API trong phần "Key Features (MVP)" được triển khai và hoạt động ổn định.
-- [ ] Hệ thống xác thực và phân quyền hoạt động chính xác.
-- [ ] Dữ liệu được lưu trữ và truy xuất đúng cách từ MongoDB.
+- [x] Hệ thống xác thực và phân quyền hoạt động chính xác.
+- [x] Dữ liệu được lưu trữ và truy xuất đúng cách từ MongoDB.
 - [ ] Tích hợp thanh toán Stripe cơ bản hoạt động (tạo checkout, xử lý webhook). (Tạm hoãn)
-- [ ] Có tài liệu API cơ bản (ví dụ: thông qua comment JSDoc hoặc Swagger).
-- [x] Có bộ test cơ bản (unit/integration) cho các chức năng cốt lõi. - *Đã hoàn thành (86 tests passed, trừ Payment)*
+- [x] Có tài liệu API cơ bản (ví dụ: thông qua comment JSDoc hoặc Swagger). - *Đã hoàn thành (Swagger UI functional)*
+- [x] Có bộ test cơ bản (unit/integration) cho các chức năng cốt lõi. - *Đã hoàn thành (106 tests passed, trừ Payment)*
 - [x] Server có thể khởi động và chạy mà không có lỗi nghiêm trọng.
 
 ## Progress Tracker
 - **Giai Đoạn 1 (Thiết Lập Cơ Bản):** [x] Hoàn thành (Thiết lập project, DB, Auth API cơ bản, Validation cơ bản)
 - **Giai Đoạn 2 (Core Features - Tarot):** [x] Hoàn thành (Triển khai service logic cơ bản)
 - **Giai Đoạn 3 (Tính Năng Nâng Cao - Astrology, Payment, Chat):** [x] Hoàn thành (Triển khai service logic cơ bản, Payment tạm hoãn)
-- **Giai Đoạn 4 (Testing & Tối Ưu):** [x] Hoàn thành (Tests cơ bản cho các module chính, trừ Payment)
-- **Giai Đoạn 5 (Triển Khai):** [ ] Đang thực hiện (Docker setup)
+- **Giai Đoạn 4 (Testing & Tối Ưu):** [x] Hoàn thành (Tests cho các module chính: User, Card, Reading, Astrology, Spread. Trừ Payment)
+- **Giai Đoạn 5 (Triển Khai):** [x] Hoàn thành (Docker setup cơ bản, logging, health check)
+- **Giai Đoạn 6 (Cleanup & Docs):** [x] Hoàn thành (Codebase review, refactor, Swagger docs)
 
 ## Completed Tasks (Chi tiết hơn trong currentTask.md)
 - Thiết lập cấu trúc dự án ban đầu.
@@ -101,3 +103,7 @@
 - Rà soát và sửa lỗi ban đầu.
 - Tích hợp `express-validator` và bổ sung validation cơ bản.
 - Khắc phục lỗi khởi động server và cảnh báo Mongoose.
+- Hoàn thành tests cho các module User, Card, Reading, Astrology, Spread.
+- Thiết lập Docker và Docker Compose.
+- Hoàn thiện tài liệu API (Swagger).
+- Refactor và dọn dẹp codebase.

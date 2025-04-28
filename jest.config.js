@@ -11,10 +11,10 @@ module.exports = {
   modulePathIgnorePatterns: ['<rootDir>/node_modules/'],
 
   // Thiết lập timeout cho các test (ms)
-  testTimeout: 60000, // 60 giây
+  // testTimeout: 60000, // 60 giây (Keep commented out for now)
 
   // Tùy chọn để chạy các hàm setup/teardown trước/sau khi test
-  // setupFilesAfterEnv: ['./tests/setup.js'], // Ví dụ: tệp setup
+  setupFilesAfterEnv: ['./src/tests/setup.js'], // Use the setup file
 
   // Báo cáo coverage (tùy chọn)
   // collectCoverage: true,
@@ -25,5 +25,5 @@ module.exports = {
   // cache: false,
 
   // Hiển thị log chi tiết hơn khi test thất bại
-  verbose: true,
+  // verbose: true, // Comment out
 };

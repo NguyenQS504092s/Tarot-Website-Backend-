@@ -11,10 +11,11 @@ services:
       # MONGODB_URI should point to the mongo service within the Docker network
       - MONGODB_URI=mongodb://mongo:27017/tarot_prod 
       # PORT is already set in Dockerfile/config, but can be overridden here if needed
-      # - PORT=5000 
+      # - PORT=5000
       - CORS_ORIGIN=http://localhost:3000 # Thêm giá trị cụ thể cho CORS_ORIGIN
     ports:
-      - "${PORT:-5001}:5005" # Map host port (default 5001) to container port 5005
+      # Ánh xạ cổng host 5005 tới cổng 5005 của container (nơi app lắng nghe theo .env và config.js)
+      - "5005:5005"
     depends_on:
       - mongo
     networks:
@@ -22,9 +23,15 @@ services:
     volumes: # Thêm phần volumes
       - .:/app # Ánh xạ thư mục hiện tại (.) của host vào /app của container
       # Loại trừ node_modules để sử dụng bản đã cài trong image, tránh xung đột hệ điều hành
-      - /app/node_modules 
-    tty: true 
-    stdin_open: true 
+      - /app/node_modules
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5005/health"] # Kiểm tra endpoint /health trên cổng nội bộ
+      interval: 30s # Kiểm tra mỗi 30 giây
+      timeout: 10s # Chờ tối đa 10 giây cho phản hồi
+      retries: 3 # Thử lại 3 lần nếu thất bại
+      start_period: 60s # Chờ 60 giây sau khi container khởi động trước khi bắt đầu kiểm tra
+    tty: true
+    stdin_open: true
 
   mongo:
     image: mongo:latest

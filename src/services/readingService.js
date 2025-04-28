@@ -3,6 +3,7 @@
  */
 const Reading = require('../models/readingModel');
 const User = require('../models/userModel');
+const Spread = require('../models/spreadModel'); // Import Spread model
 const cardService = require('./cardService');
 const ApiError = require('../utils/apiError');
 
@@ -15,24 +16,31 @@ const ApiError = require('../utils/apiError');
  * @param {Boolean} allowReversed Cho phép lá bài ngược (tùy chọn)
  * @returns {Promise<Object>} Thông tin phiên đọc bài mới tạo
  */
-exports.createReading = async (userId, spreadType, question, deckName = 'Rider Waite Smith', allowReversed = true) => {
+exports.createReading = async (userId, spreadName, question, deckName = 'Rider Waite Smith', allowReversed = true) => { // Renamed spreadType to spreadName for clarity
   try {
-    // Rút lá bài ngẫu nhiên dựa trên kiểu trải bài
-    const drawnCards = await cardService.drawCardsForSpread(spreadType, deckName, allowReversed);
-    
-    // Tạo mảng cards cho phiên đọc bài
-    const cards = drawnCards.map(drawnCard => ({
-      cardId: drawnCard.cardId,
-      position: drawnCard.position,
-      isReversed: drawnCard.isReversed
+    // Tìm thông tin spread trong DB
+    const spreadInfo = await Spread.findOne({ name: spreadName, isActive: true });
+    if (!spreadInfo) {
+      throw new ApiError(`Kiểu trải bài không hợp lệ hoặc không hoạt động: ${spreadName}`, 400);
+    }
+
+    // Rút lá bài ngẫu nhiên dựa trên cardCount từ spreadInfo
+    const drawnCards = await cardService.drawCards(deckName, spreadInfo.cardCount, allowReversed); // Use drawCards directly
+
+    // Gán vị trí cho từng lá bài dựa trên index (1-based)
+    // drawnCards is an array of { card: CardObject, isReversed: boolean }
+    const cards = drawnCards.map((drawnCard, index) => ({
+      cardId: drawnCard.card._id, // Correctly access the card ID
+      position: index + 1,        // Assign position based on index
+      isReversed: drawnCard.isReversed // Access isReversed directly
     }));
     
     // Tạo phiên đọc bài mới
     const newReading = await Reading.create({
       userId,
-      spread: spreadType, // Use the correct field name 'spread' as per the validation error
+      spread: spreadName, // Use the validated spreadName
       question,
-      cards
+      cards // Use the cards array with positions
     });
 
     // Lấy thông tin người dùng để cập nhật số lần đọc bài
