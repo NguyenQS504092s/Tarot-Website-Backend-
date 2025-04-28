@@ -14,6 +14,10 @@
 - **`src/tests/`:** Contains integration tests using Jest and Supertest.
 - **`scripts/`:** Contains utility scripts (e.g., `seedSpreads.js`).
 
+- **Docker Configuration:**
+    - **`Dockerfile`:** Defines the build process for the backend Docker image. Uses a multi-stage build to separate dependencies installation from the final runtime image, resulting in a smaller image. Copies only necessary application code and production dependencies. Exposes port 5005 and sets `NODE_ENV` to `production`. Includes a `HEALTHCHECK` instruction. Runs as a non-root user (`node`).
+    - **`docker-compose.yml`:** Defines and manages multi-container Docker applications. Sets up the `tarot-backend` service (builds from `Dockerfile`, maps host port 5005 to container port 5005, depends on `mongo`, uses a custom network). Sets up the `mongo` service (uses `mongo:6.0` image, persists data via a volume, uses the custom network). Defines a local volume for MongoDB data persistence and a bridge network for inter-container communication. Includes basic production environment variable settings (which should be managed securely).
+
 ## Data Flow
 - Incoming requests hit `src/app.js`.
 - Requests pass through configured middleware (security, CORS, rate limiting, parsers).

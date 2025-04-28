@@ -43,11 +43,11 @@ process.on('uncaughtException', (err) => {
 
 // Hàm khởi động server
 async function startServer() {
-  // Bọc toàn bộ logic khởi động trong try...catch để bắt lỗi sớm nhất có thể
-  try { 
-    // Handle unhandled promise rejections (gắn sớm hơn)
-    process.on('unhandledRejection', (err) => {
-      console.error('LỖI PROMISE KHÔNG XỬ LÝ (SỚM)! Đang tắt ứng dụng...');
+  let server = null; // Khai báo server ở phạm vi ngoài try block
+
+  // Handle unhandled promise rejections (gắn sớm hơn)
+  process.on('unhandledRejection', (err) => {
+    console.error('LỖI PROMISE KHÔNG XỬ LÝ (SỚM)! Đang tắt ứng dụng...');
       console.error(`${err.name}: ${err.message}`);
       console.error(err.stack);
       // Cố gắng đóng server nếu nó đã khởi động
@@ -87,6 +87,7 @@ async function startServer() {
      }
    });
 
+  try { // Thêm lại try block bị thiếu
     // Kiểm tra biến môi trường
     console.log('--- DEBUG: Kiểm tra biến môi trường...');
     if (!checkRequiredEnvVars()) {
@@ -104,11 +105,10 @@ async function startServer() {
      const PORT = config.port;
      const HOST = '0.0.0.0'; // Lắng nghe trên tất cả các interface
      console.log(`--- DEBUG: Chuẩn bị lắng nghe trên host ${HOST} cổng ${PORT}...`); 
-     // Khai báo server ở đây để có thể truy cập trong catch block nếu listen lỗi
-     let server; 
+     // Gán giá trị cho server đã khai báo ở trên
      server = app.listen(PORT, HOST, () => { // Thêm HOST vào listen
        // Sử dụng logger ở đây vì server đã khởi động thành công
-       logger.info(`Server đang chạy trên host ${HOST} cổng ${PORT} ở chế độ ${config.env}`); 
+       logger.info(`Server đang chạy trên host ${HOST} cổng ${PORT} ở chế độ ${config.env}`);
      });
 
      // Gắn lỗi 'error' cho server instance để bắt lỗi EADDRINUSE etc.

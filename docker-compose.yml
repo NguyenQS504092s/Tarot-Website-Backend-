@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   tarot-backend:
     build: .
@@ -10,51 +8,52 @@ services:
       - NODE_ENV=production # Ensure production mode
       # MONGODB_URI should point to the mongo service within the Docker network
       # IMPORTANT: Add credentials if MongoDB authentication is enabled
-      - MONGODB_URI=mongodb://mongo:27017/tarot_prod 
+      - MONGODB_URI=mongodb://mongo:27017/tarot_prod
       # PORT is exposed by Dockerfile, no need to set here unless overriding
       # - PORT=5005
       # IMPORTANT: Replace with your actual frontend production URL(s)
-      - CORS_ORIGIN=https://your-frontend-domain.com 
+      - CORS_ORIGIN=https://your-frontend-domain.com
       # Add other necessary production environment variables here (e.g., JWT_SECRET)
-      # - JWT_SECRET=your_strong_production_secret 
+      - JWT_SECRET=4bfc8aa0acb8d2c800990e1f635be7165981c85dc455caeafcda7755036d5e32c8a41f4361fadc10aaae8ce4dc3c7590bb81aa21c516b1a1a9b63b9ed6add5e1
     ports:
       # Map host port 5005 to container port 5005 (where the app listens)
       - "5005:5005"
-    depends_on:
+    depends_on: # Reverted to simple depends_on, removed condition
       - mongo
     networks:
       - tarot-network
     # REMOVED volumes mount for production - code should be in the image
-    # volumes: 
-    #   - .:/app 
-    #   - /app/node_modules 
-    healthcheck:
+    # volumes:
+    #   - .:/app
+    #   - /app/node_modules
+    healthcheck: # Keep backend healthcheck
       # Healthcheck uses the internal port
-      test: ["CMD", "curl", "-f", "http://localhost:5005/health"] 
-      interval: 30s 
+      test: ["CMD", "curl", "-f", "http://localhost:5005/health"]
+      interval: 30s
       timeout: 10s # Chờ tối đa 10 giây cho phản hồi
-      retries: 3 
-      start_period: 60s 
+      retries: 3
+      start_period: 60s
     # REMOVED tty and stdin_open - not needed for backend service
     # tty: true
     # stdin_open: true
 
   mongo:
-    image: mongo:6.0 # Pin to a specific major version (e.g., 6.0)
+    image: mongo # Use latest or a compatible version like mongo:8.0
     container_name: tarot_mongo_db
     restart: unless-stopped
     # IMPORTANT: Enable authentication for production
     # environment:
     #   MONGO_INITDB_ROOT_USERNAME: your_mongo_root_user # Use secrets management
     #   MONGO_INITDB_ROOT_PASSWORD: your_mongo_root_password # Use secrets management
-    #   MONGO_INITDB_DATABASE: tarot_prod 
+    #   MONGO_INITDB_DATABASE: tarot_prod
     # REMOVED ports exposure for production - connect via internal network
     # ports:
-    #   - "27017:27017" 
+    #   - "27017:27017"
     volumes:
       - mongo-data:/data/db # Persist data
     networks:
       - tarot-network
+    # REMOVED healthcheck for mongo temporarily to simplify startup
 
 volumes:
   mongo-data:
