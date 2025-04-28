@@ -1,0 +1,62 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main # Hoặc nhánh production của bạn
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest # Sử dụng runner của GitHub
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18' # Sử dụng phiên bản Node.js phù hợp
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run tests
+      run: npm test # Đảm bảo script test trong package.json chạy được
+
+    - name: Build Docker image
+      run: docker build . --file Dockerfile --tag your-dockerhub-username/tarot-backend:${{ github.sha }} # Thay bằng username/repo của bạn
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_HUB_USERNAME }} # Cấu hình secrets trong repo GitHub
+        password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }} # Cấu hình secrets trong repo GitHub
+
+    - name: Push Docker image
+      run: docker push your-dockerhub-username/tarot-backend:${{ github.sha }} # Thay bằng username/repo của bạn
+
+  # Bước deploy (ví dụ đơn giản dùng SSH) - Cần tùy chỉnh rất nhiều
+  # Bước này phụ thuộc vào môi trường triển khai cụ thể của bạn.
+  # Bạn cần bỏ comment và cấu hình lại bước này cho phù hợp.
+  # deploy:
+  #   needs: build-and-test # Chỉ chạy sau khi build và test thành công
+  #   runs-on: ubuntu-latest
+  #   environment: production # Có thể định nghĩa môi trường trong GitHub
+  #   steps:
+  #   - name: Deploy via SSH
+  #     uses: appleboy/ssh-action@v0.1.10 # Sử dụng action SSH
+  #     with:
+  #       host: ${{ secrets.SSH_HOST }}
+  #       username: ${{ secrets.SSH_USERNAME }}
+  #       key: ${{ secrets.SSH_PRIVATE_KEY }}
+  #       script: |
+  #         cd /path/to/your/app # Thay bằng đường dẫn trên server
+  #         git pull origin main # Pull code mới nhất (hoặc chỉ cần docker compose pull)
+  #         docker compose down # Dừng container cũ
+  #         docker compose pull tarot-backend # Pull image mới nhất
+  #         docker compose up -d # Khởi động container mới
+  #         docker image prune -f # Dọn dẹp image cũ

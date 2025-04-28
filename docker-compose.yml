@@ -5,45 +5,52 @@ services:
     build: .
     container_name: tarot_backend_app
     restart: unless-stopped
-    env_file: .env # Load environment variables from .env file
+    # env_file: .env # REMOVED: Production env vars should be managed securely, not via .env file
     environment:
       - NODE_ENV=production # Ensure production mode
       # MONGODB_URI should point to the mongo service within the Docker network
+      # IMPORTANT: Add credentials if MongoDB authentication is enabled
       - MONGODB_URI=mongodb://mongo:27017/tarot_prod 
-      # PORT is already set in Dockerfile/config, but can be overridden here if needed
-      # - PORT=5000
-      - CORS_ORIGIN=http://localhost:3000 # Thêm giá trị cụ thể cho CORS_ORIGIN
+      # PORT is exposed by Dockerfile, no need to set here unless overriding
+      # - PORT=5005
+      # IMPORTANT: Replace with your actual frontend production URL(s)
+      - CORS_ORIGIN=https://your-frontend-domain.com 
+      # Add other necessary production environment variables here (e.g., JWT_SECRET)
+      # - JWT_SECRET=your_strong_production_secret 
     ports:
-      # Ánh xạ cổng host 5005 tới cổng 5005 của container (nơi app lắng nghe theo .env và config.js)
+      # Map host port 5005 to container port 5005 (where the app listens)
       - "5005:5005"
     depends_on:
       - mongo
     networks:
       - tarot-network
-    volumes: # Thêm phần volumes
-      - .:/app # Ánh xạ thư mục hiện tại (.) của host vào /app của container
-      # Loại trừ node_modules để sử dụng bản đã cài trong image, tránh xung đột hệ điều hành
-      - /app/node_modules
+    # REMOVED volumes mount for production - code should be in the image
+    # volumes: 
+    #   - .:/app 
+    #   - /app/node_modules 
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5005/health"] # Kiểm tra endpoint /health trên cổng nội bộ
-      interval: 30s # Kiểm tra mỗi 30 giây
+      # Healthcheck uses the internal port
+      test: ["CMD", "curl", "-f", "http://localhost:5005/health"] 
+      interval: 30s 
       timeout: 10s # Chờ tối đa 10 giây cho phản hồi
-      retries: 3 # Thử lại 3 lần nếu thất bại
-      start_period: 60s # Chờ 60 giây sau khi container khởi động trước khi bắt đầu kiểm tra
-    tty: true
-    stdin_open: true
+      retries: 3 
+      start_period: 60s 
+    # REMOVED tty and stdin_open - not needed for backend service
+    # tty: true
+    # stdin_open: true
 
   mongo:
-    image: mongo:latest
+    image: mongo:6.0 # Pin to a specific major version (e.g., 6.0)
     container_name: tarot_mongo_db
     restart: unless-stopped
-    # Optional: Add authentication
+    # IMPORTANT: Enable authentication for production
     # environment:
-    #   MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
-    #   MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
-    #   MONGO_INITDB_DATABASE: tarot_prod # Optional: create a default DB
-    ports:
-      - "27017:27017" # Expose MongoDB port only if needed for external access (use with caution)
+    #   MONGO_INITDB_ROOT_USERNAME: your_mongo_root_user # Use secrets management
+    #   MONGO_INITDB_ROOT_PASSWORD: your_mongo_root_password # Use secrets management
+    #   MONGO_INITDB_DATABASE: tarot_prod 
+    # REMOVED ports exposure for production - connect via internal network
+    # ports:
+    #   - "27017:27017" 
     volumes:
       - mongo-data:/data/db # Persist data
     networks:

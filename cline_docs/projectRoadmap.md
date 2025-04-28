@@ -91,6 +91,7 @@
 - **Giai Đoạn 4 (Testing & Tối Ưu):** [x] Hoàn thành (Tests cho các module chính: User, Card, Reading, Astrology, Spread. Trừ Payment)
 - **Giai Đoạn 5 (Triển Khai):** [x] Hoàn thành (Docker setup cơ bản, logging, health check)
 - **Giai Đoạn 6 (Cleanup & Docs):** [x] Hoàn thành (Codebase review, refactor, Swagger docs)
+- **Giai Đoạn 7 (Chuẩn Bị Triển Khai):** [ ] Đang tiến hành
 
 ## Completed Tasks (Chi tiết hơn trong currentTask.md)
 - Thiết lập cấu trúc dự án ban đầu.

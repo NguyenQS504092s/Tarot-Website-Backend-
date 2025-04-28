@@ -1,6 +1,6 @@
 # Stage 1: Build dependencies
-# Use a specific Node.js LTS version (Debian-based for better compatibility)
-FROM node:18 AS builder
+# Use a specific Node.js LTS slim version (Debian-based) for smaller image size
+FROM node:18-bullseye-slim AS builder
 
 # Set the working directory
 WORKDIR /app
@@ -12,7 +12,7 @@ COPY package*.json ./
 RUN npm ci --only=production
 
 # Stage 2: Create the final image
-FROM node:18
+FROM node:18-bullseye-slim
 
 # Set the working directory
 WORKDIR /app
@@ -37,6 +37,11 @@ EXPOSE 5005
 ENV NODE_ENV=production
 # Optional: Set default PORT if not provided externally
 # ENV PORT=5000
+
+# Add HEALTHCHECK instruction
+# Adjust the port and path as needed based on your health check endpoint
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:5005/health || exit 1
 
 # Switch to the non-root user before running the app
 USER node

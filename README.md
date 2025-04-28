@@ -92,25 +92,38 @@ Backend API service for the Tarot Website application, providing functionalities
 
 ### Environment Variables Overview
 
-The application uses the following environment variables (refer to `src/config/config.js` for defaults and usage):
+The application relies on environment variables for configuration. Refer to `src/config/config.js` for defaults and how variables are used. **It is crucial to manage sensitive variables securely in production.**
 
-*   **`NODE_ENV`**: Application environment (`development`, `production`, `test`). Default: `development`.
-*   **`PORT`**: Port the server listens on. Default: `5005`.
-*   **`JWT_SECRET`**: **(Required)** Secret key for signing JSON Web Tokens.
-*   **`JWT_EXPIRES_IN`**: JWT expiration time. Default: `7d`.
-*   **`JWT_REFRESH_EXPIRES_IN`**: Refresh token expiration time. Default: `30d`.
-*   **`MONGODB_URI`**: **(Required)** Connection string for the main MongoDB database.
-*   **`MONGODB_TEST_URI`**: **(Required for testing)** Connection string for the test MongoDB database.
-*   **`CORS_ORIGIN`**: Allowed origins for CORS requests. Default: `*`.
-*   **`API_PREFIX`**: Prefix for all API routes. Default: `/api`.
-*   **`FREE_READINGS_PER_DAY`**: Limit for free readings. Default: `3`.
-*   **`STRIPE_SECRET_KEY`**: **(Required if payments enabled)** Stripe API secret key.
-*   **`STRIPE_WEBHOOK_SECRET`**: **(Required if payments enabled)** Stripe webhook signing secret.
-*   **`FRONTEND_URL`**: Base URL of the frontend application (used for CORS, redirects, etc.). Default: `http://localhost:3000`.
-*   **`PERFORMANCE_THRESHOLD_MS`**: Threshold (ms) for logging slow operations. Default: `1000`.
-*   **`RATE_LIMIT_WINDOW_MS`**: Time window (ms) for rate limiting. Default: `900000` (15 minutes).
-*   **`RATE_LIMIT_MAX`**: Max requests per window per IP for rate limiting. Default: `100`.
-*   *(Email variables like `EMAIL_HOST`, `EMAIL_PORT`, etc., might be needed if email functionality (e.g., password reset) is fully implemented).*
+**Required for Production:**
+
+*   `NODE_ENV`: Set to `production`. Enables optimizations and security features.
+*   `PORT`: The internal port the Node.js application listens on within the container (e.g., `5005`). This port is mapped externally by Docker or a reverse proxy. Default: `5005`.
+*   `MONGODB_URI`: **(Sensitive)** The full connection string for your **production** MongoDB database. If your database requires authentication (highly recommended for production), include credentials: `mongodb://<username>:<password>@your_mongo_host:27017/tarot_prod?authSource=admin`. **Never hardcode credentials.** Use secure injection methods (Docker secrets, platform environment variables).
+*   `JWT_SECRET`: **(Highly Sensitive)** A long, strong, random secret used to sign JWTs. Generate a unique secret for production using a secure method (see `userInstructions/generate_jwt_secret.txt` for generation, but use a **different** secret for production). **Never use default or weak secrets.** Manage securely.
+*   `CORS_ORIGIN`: The specific URL(s) of your production frontend application that are allowed to make requests to this API. Example: `https://yourdomain.com` or comma-separated `https://www.yourdomain.com,https://app.yourdomain.com`. Using `*` is insecure for production.
+
+**Optional / Recommended for Production:**
+
+*   `JWT_EXPIRES_IN`: Access token expiration time (e.g., `1h`, `15m`). Shorter times increase security. Default: `7d`.
+*   `JWT_REFRESH_EXPIRES_IN`: Refresh token expiration time (e.g., `30d`, `60d`). Default: `30d`.
+*   `FRONTEND_URL`: The base URL of your production frontend (e.g., `https://yourdomain.com`). Used for redirects (like Stripe checkout). Default: `http://localhost:3000`.
+*   `RATE_LIMIT_WINDOW_MS`: Time window (in milliseconds) for rate limiting. Default: `900000` (15 minutes).
+*   `RATE_LIMIT_MAX`: Max requests allowed per window per IP. Default: `100`.
+*   `PERFORMANCE_THRESHOLD_MS`: Threshold (in milliseconds) for logging slow API requests. Default: `1000`.
+*   `API_PREFIX`: URL prefix for all API routes. Default: `/api`.
+*   `FREE_READINGS_PER_DAY`: Business logic setting for free reading limits. Default: `3`.
+
+**Required for Stripe (If Payments Enabled):**
+
+*   `STRIPE_SECRET_KEY`: **(Highly Sensitive)** Your live Stripe secret key (`sk_live_...`). Manage securely.
+*   `STRIPE_WEBHOOK_SECRET`: **(Highly Sensitive)** Your live Stripe webhook signing secret (`whsec_...`). Manage securely.
+
+**Required for MongoDB Service (in `docker-compose.yml` for Production DB Setup):**
+
+*   `MONGO_INITDB_ROOT_USERNAME`: **(Sensitive)** Username for the MongoDB root user. Manage securely.
+*   `MONGO_INITDB_ROOT_PASSWORD`: **(Highly Sensitive)** Password for the MongoDB root user. Manage securely.
+
+**Important Security Note:** Never commit files containing production secrets (like `.env` with production values) to version control (Git). Use secure methods provided by your deployment platform or tools like Docker Secrets to manage sensitive environment variables.
 
 4.  **Ensure MongoDB is running.**
 

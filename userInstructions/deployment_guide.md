@@ -25,21 +25,34 @@ Hướng dẫn này mô tả các bước cơ bản để triển khai ứng d�
         ```
     *   (Tùy chọn) Checkout nhánh/tag cụ thể nếu cần: `git checkout <branch_or_tag_name>`
 
-3.  **Cấu hình Biến Môi Trường:**
-    *   **KHÔNG** sao chép tệp `.env` từ local lên server production.
-    *   Tạo một tệp `.env` mới trên máy chủ trong thư mục gốc của dự án:
-        ```bash
-        nano .env
+3.  **Cấu hình Biến Môi Trường cho Production:**
+    *   **CỰC KỲ QUAN TRỌNG:** Không bao giờ commit hoặc sao chép tệp `.env` chứa các bí mật production (như `JWT_SECRET`, `MONGODB_URI` có thông tin đăng nhập, Stripe keys) vào hệ thống kiểm soát phiên bản (Git) hoặc lên máy chủ production dưới dạng file `.env` thông thường.
+    *   Sử dụng các phương thức quản lý bí mật an toàn được cung cấp bởi nền tảng triển khai của bạn (ví dụ: Docker Secrets, Kubernetes Secrets, biến môi trường của các dịch vụ cloud như AWS Elastic Beanstalk, Heroku Config Vars, Vercel Environment Variables, etc.).
+    *   Nếu bạn đang triển khai trên máy chủ riêng và sử dụng Docker Compose, cách an toàn hơn là định nghĩa các biến môi trường trực tiếp trong file `docker-compose.yml` (sử dụng `environment` hoặc `env_file` trỏ đến file bên ngoài Git) hoặc sử dụng Docker Secrets nếu phiên bản Docker Compose hỗ trợ. **Tuyệt đối không để file `.env` chứa bí mật production trong cùng thư mục với `docker-compose.yml` khi commit lên Git.**
+    *   Xác định và cấu hình các biến môi trường sau cho môi trường production:
+        *   `NODE_ENV`: Phải được đặt là `production`.
+        *   `PORT`: Cổng nội bộ mà ứng dụng Node.js lắng nghe bên trong container (mặc định 5005). Cổng này sẽ được ánh xạ ra ngoài bởi Docker hoặc Reverse Proxy.
+        *   `MONGODB_URI`: **(Bí mật nhạy cảm)** Chuỗi kết nối đầy đủ đến cơ sở dữ liệu MongoDB production của bạn. Nếu DB yêu cầu xác thực (rất khuyến nghị cho production), hãy bao gồm thông tin đăng nhập: `mongodb://<username>:<password>@your_mongo_host:27017/tarot_prod?authSource=admin`. **Không bao giờ hardcode thông tin đăng nhập trực tiếp trong file cấu hình.**
+        *   `JWT_SECRET`: **(Bí mật cực kỳ nhạy cảm)** Một chuỗi ngẫu nhiên, dài và mạnh dùng để ký JWT. Tạo một secret duy nhất cho production (tham khảo `userInstructions/generate_jwt_secret.txt` để tạo, nhưng **không sử dụng lại secret của dev**).
+        *   `CORS_ORIGIN`: **(Quan trọng cho bảo mật)** URL cụ thể của ứng dụng frontend production của bạn (ví dụ: `https://your-frontend-domain.com`). Nếu có nhiều domain, sử dụng dấu phẩy để phân tách (ví dụ: `https://domain1.com,https://domain2.com`). **Không bao giờ sử dụng `*` trong production.**
+        *   Các biến môi trường tùy chọn khác như `FRONTEND_URL`, `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX`, `PERFORMANCE_THRESHOLD_MS`, `API_PREFIX`, `FREE_READINGS_PER_DAY`.
+        *   Nếu kích hoạt lại thanh toán Stripe, bạn cần cấu hình `STRIPE_SECRET_KEY` và `STRIPE_WEBHOOK_SECRET` (cũng là các bí mật cực kỳ nhạy cảm).
+
+    *   **Ví dụ (Sử dụng biến môi trường trực tiếp trong `docker-compose.yml` - chỉ là ví dụ, phương thức an toàn hơn là dùng Docker Secrets):**
+        ```yaml
+        services:
+          tarot-backend:
+            # ... other configurations ...
+            environment:
+              - NODE_ENV=production
+              - PORT=5005
+              - MONGODB_URI=mongodb://mongo:27017/tarot_prod # Thay bằng chuỗi kết nối production
+              - JWT_SECRET=your_production_strong_jwt_secret # Thay bằng secret production
+              - CORS_ORIGIN=https://your-frontend-domain.com # Thay bằng URL frontend production
+              # Thêm các biến khác
+            # ...
         ```
-    *   Thêm các biến môi trường **BẮT BUỘC** và các biến tùy chọn cần thiết cho môi trường production. Tham khảo phần "Environment Variables Overview" trong `README.md`. Ví dụ tối thiểu:
-        ```env
-        NODE_ENV=production
-        PORT=5005 # Cổng nội bộ container, không phải cổng public
-        MONGODB_URI=mongodb://mongo:27017/tarot_prod # Kết nối tới service 'mongo' trong Docker Compose
-        JWT_SECRET=your_production_strong_jwt_secret # *** THAY BẰNG KHÓA BÍ MẬT MẠNH ***
-        # Thêm các biến khác nếu cần (CORS_ORIGIN, FRONTEND_URL, STRIPE nếu dùng...)
-        ```
-    *   **Quan trọng:** Sử dụng một `JWT_SECRET` mạnh và khác với môi trường development. Đảm bảo `MONGODB_URI` trỏ đúng vào service MongoDB trong mạng Docker (thường là tên service, ví dụ `mongo`).
+    *   **Lưu ý:** Nếu bạn sử dụng file `.env` trên server production (chỉ khi không có lựa chọn nào khác tốt hơn), hãy đảm bảo file này **không** được đưa vào Git và chỉ tồn tại trên server.
 
 4.  **Build và Khởi chạy Container:**
     *   Từ thư mục gốc của dự án, chạy lệnh sau:
@@ -98,12 +111,38 @@ Hướng dẫn này mô tả các bước cơ bản để triển khai ứng d�
     *   Khởi động lại Nginx: `sudo systemctl restart nginx`
     *   Bây giờ bạn có thể truy cập ứng dụng qua cổng 80 (hoặc 443 nếu dùng HTTPS) của server thay vì cổng 5005.
 
-7.  **Cập nhật Ứng dụng:**
-    *   Pull thay đổi mới nhất từ Git: `git pull origin <branch_name>`
-    *   Build lại và khởi động lại container: `sudo docker compose up --build -d`
+7.  **Cập nhật Ứng dụng (Sử dụng CI/CD):**
+    *   Với CI/CD Pipeline (ví dụ: GitHub Actions) đã thiết lập, quá trình cập nhật ứng dụng sẽ tự động hơn.
+    *   Khi bạn push code lên nhánh `main` (hoặc nhánh được cấu hình trong workflow), GitHub Actions sẽ tự động build, test và push Docker image mới lên registry.
+    *   Bước deploy (nếu được cấu hình trong workflow) sẽ tự động kết nối đến máy chủ của bạn, pull image mới và khởi động lại container.
+    *   Nếu bạn chưa cấu hình bước deploy tự động, bạn sẽ cần SSH vào máy chủ và chạy lệnh pull/restart thủ công sau khi CI/CD hoàn thành:
+        ```bash
+        cd /path/to/your/app # Thay bằng đường dẫn trên server
+        sudo docker compose pull tarot-backend # Pull image mới nhất từ registry
+        sudo docker compose up -d --force-recreate # Khởi động lại container với image mới
+        sudo docker image prune -f # Dọn dẹp image cũ không dùng nữa
+        ```
 
-**Lưu ý:**
+**CI/CD Pipeline (GitHub Actions):**
+
+*   Dự án đã được cấu hình một workflow CI/CD cơ bản sử dụng GitHub Actions trong file `.github/workflows/ci-cd.yml`.
+*   Workflow này sẽ tự động chạy khi có push hoặc pull request đến nhánh `main`.
+*   Các bước bao gồm: Checkout code, Setup Node.js, Install dependencies, Run tests, Build Docker image, Login to Docker Registry, Push Docker image.
+*   Bước deploy tự động đã được phác thảo nhưng đang bị comment lại. Bạn cần tùy chỉnh và bỏ comment phần này để kích hoạt deploy tự động, dựa trên môi trường triển khai cụ thể của bạn (ví dụ: cấu hình SSH secrets trong repository GitHub).
+
+**Các Bước Kiểm tra Cuối cùng trước Triển khai:**
+
+*   **Kiểm tra Biến Môi Trường Production:** Đảm bảo tất cả các biến môi trường cần thiết (`NODE_ENV`, `PORT`, `MONGODB_URI`, `JWT_SECRET`, `CORS_ORIGIN`, v.v.) đã được cấu hình chính xác và an toàn trên môi trường production.
+*   **Kiểm tra Kết nối Database:** Xác nhận ứng dụng có thể kết nối thành công đến cơ sở dữ liệu production.
+*   **Kiểm tra Logging:** Đảm bảo log được ghi ra console (stdout/stderr) và được thu thập bởi hệ thống quản lý log của bạn.
+*   **Kiểm tra Health Check:** Xác nhận health check endpoint (`/health`) hoạt động đúng và Docker Compose/hệ thống orchestration nhận diện container là healthy.
+*   **Kiểm tra Chức năng Cơ bản:** Thực hiện các kiểm tra thủ công hoặc tự động cơ bản trên môi trường production để xác nhận các API chính (đăng ký, đăng nhập, lấy dữ liệu bài, v.v.) hoạt động như mong đợi.
+*   **Kiểm tra Bảo mật:** Xác nhận CORS chỉ cho phép các domain frontend hợp lệ, rate limiting hoạt động, và các header bảo mật từ Helmet được áp dụng.
+*   **Kiểm tra Hiệu suất (Tùy chọn):** Nếu có thể, thực hiện kiểm tra hiệu suất cơ bản để đảm bảo ứng dụng đáp ứng đủ nhanh.
+
+**Lưu ý Chung:**
 
 *   Đây là hướng dẫn cơ bản. Môi trường production thực tế có thể yêu cầu các cấu hình phức tạp hơn về bảo mật, logging, monitoring, và backup.
 *   Luôn đảm bảo an toàn cho các khóa bí mật (JWT_SECRET, Stripe keys, v.v.).
 *   Xem xét việc sử dụng managed database thay vì chạy MongoDB trong container cho production.
+*   Việc cấu hình deploy tự động trong CI/CD cần được thực hiện cẩn thận và kiểm tra kỹ lưỡng.
