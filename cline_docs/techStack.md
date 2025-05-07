@@ -22,3 +22,10 @@
 - Centralized error handling.
 - Environment variable configuration.
 - Graceful shutdown implementation.
+
+## Deployment
+- **Containerization:** Docker
+- **Orchestration (Local/Server):** Docker Compose
+- **CI/CD:** GitHub Actions (Build, Test, Push Docker Image)
+- **Reverse Proxy (Recommended):** Nginx
+- **Hosting (Target):** Linux Server (e.g., Ubuntu, CentOS)

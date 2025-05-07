@@ -292,17 +292,35 @@
 - Xác nhận cả hai container (`tarot-backend`, `mongo`) đang chạy (`Up`) thông qua `docker ps`.
 - Xác nhận `tarot-backend` kết nối thành công với MongoDB và server khởi động qua logs.
 
-## Giai Đoạn 9: Chuẩn Bị Triển Khai Production
+## Giai Đoạn 9: Chuẩn Bị Triển Khai Production (Docker Compose) - Hoàn thành
+
+### Objectives
+- [x] Hoàn tác các thay đổi cấu hình cho Vercel (`vercel.json`, `.github/workflows/ci-cd.yml`).
+- [x] Xem xét và cập nhật chi tiết hướng dẫn triển khai (`userInstructions/deployment_guide.md`) cho phương án Docker Compose, nhấn mạnh quản lý bí mật, xác thực DB, và reverse proxy/HTTPS.
+
+### Completed Steps
+- Khôi phục `.github/workflows/ci-cd.yml` về cấu hình build/push Docker image và deploy SSH (commented).
+- Khôi phục `vercel.json` về trạng thái cơ bản.
+- Cập nhật `userInstructions/deployment_guide.md` với hướng dẫn chi tiết cho Docker Compose deployment, bao gồm cách quản lý biến môi trường an toàn, khuyến nghị bật xác thực DB, và cấu hình Nginx/HTTPS.
+
+**Kết luận Giai đoạn 9:** Dự án đã được chuẩn bị sẵn sàng cho việc triển khai lên máy chủ Linux bằng Docker Compose. Các cấu hình cần thiết (Dockerfile, docker-compose.yml, CI workflow cơ bản) đã có. Hướng dẫn triển khai chi tiết (`userInstructions/deployment_guide.md`) đã được cập nhật.
+
+## Giai Đoạn 10: Triển Khai Thực Tế (User Action)
 
 ### Current Objectives
-- [ ] Xem xét và hoàn thiện quy trình CI/CD (`.github/workflows/ci-cd.yml`) cho môi trường production cụ thể (ví dụ: Vercel, Heroku, AWS).
-- [ ] Cập nhật chi tiết hướng dẫn triển khai (`userInstructions/deployment_guide.md`) với các bước cụ thể cho nhà cung cấp dịch vụ đã chọn.
-- [ ] Đảm bảo quản lý biến môi trường và secrets an toàn cho production.
+- [ ] Người dùng thực hiện các bước triển khai lên máy chủ production theo hướng dẫn trong `userInstructions/deployment_guide.md`.
 
-### Next Steps
-- Xác định nhà cung cấp dịch vụ hosting cho production (nếu chưa có).
-- Tùy chỉnh bước `deploy` trong file `.github/workflows/ci-cd.yml` cho phù hợp.
-- Bổ sung hướng dẫn cấu hình DNS, SSL, và các thiết lập production khác vào `userInstructions/deployment_guide.md`.
+### Next Steps (Dành cho người dùng)
+1.  Chuẩn bị máy chủ Linux production.
+2.  Cài đặt Docker và Docker Compose trên máy chủ.
+3.  Clone repository dự án.
+4.  Thiết lập cơ sở dữ liệu MongoDB production (khuyến nghị dùng MongoDB Atlas).
+5.  Tạo file biến môi trường production an toàn trên máy chủ (ví dụ: `/etc/tarot-app/.env.prod`) với các giá trị chính xác (MONGODB_URI, JWT_SECRET, CORS_ORIGIN, etc.).
+6.  Cập nhật `docker-compose.yml` để sử dụng `env_file` trỏ đến file ở bước 5 (nếu chọn phương pháp này).
+7.  Build và khởi chạy container bằng `sudo docker compose up --build -d`.
+8.  Kiểm tra trạng thái và logs của container.
+9.  Cấu hình Reverse Proxy (Nginx) và HTTPS (Certbot).
+10. (Tùy chọn) Cấu hình bước deploy tự động trong `.github/workflows/ci-cd.yml` bằng cách cung cấp SSH secrets cho GitHub Actions.
 
 </final_file_content>
 

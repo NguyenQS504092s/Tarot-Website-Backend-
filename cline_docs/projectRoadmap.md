@@ -89,9 +89,10 @@
 - **Giai Đoạn 2 (Core Features - Tarot):** [x] Hoàn thành (Triển khai service logic cơ bản)
 - **Giai Đoạn 3 (Tính Năng Nâng Cao - Astrology, Payment, Chat):** [x] Hoàn thành (Triển khai service logic cơ bản, Payment tạm hoãn)
 - **Giai Đoạn 4 (Testing & Tối Ưu):** [x] Hoàn thành (Tests cho các module chính: User, Card, Reading, Astrology, Spread. Trừ Payment)
-- **Giai Đoạn 5 (Triển Khai):** [x] Hoàn thành (Docker setup cơ bản, logging, health check)
+- **Giai Đoạn 5 (Triển Khai Cục Bộ):** [x] Hoàn thành (Docker setup cơ bản, logging, health check, khắc phục sự cố khởi động)
 - **Giai Đoạn 6 (Cleanup & Docs):** [x] Hoàn thành (Codebase review, refactor, Swagger docs)
-- **Giai Đoạn 7 (Chuẩn Bị Triển Khai):** [ ] Đang tiến hành
+- **Giai Đoạn 7 (Chuẩn Bị Triển Khai Production):** [x] Hoàn thành (Rà soát cấu hình Docker, CI/CD, cập nhật hướng dẫn triển khai)
+- **Giai Đoạn 8 (Triển Khai Thực Tế):** [ ] Đang tiến hành (User Action - Theo `userInstructions/deployment_guide.md`)
 
 ## Completed Tasks (Chi tiết hơn trong currentTask.md)
 - Thiết lập cấu trúc dự án ban đầu.

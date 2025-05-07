@@ -15,8 +15,8 @@
 - **`scripts/`:** Contains utility scripts (e.g., `seedSpreads.js`).
 
 - **Docker Configuration:**
-    - **`Dockerfile`:** Defines the build process for the backend Docker image. Uses a multi-stage build to separate dependencies installation from the final runtime image, resulting in a smaller image. Copies only necessary application code and production dependencies. Exposes port 5005 and sets `NODE_ENV` to `production`. Includes a `HEALTHCHECK` instruction. Runs as a non-root user (`node`).
-    - **`docker-compose.yml`:** Defines and manages multi-container Docker applications. Sets up the `tarot-backend` service (builds from `Dockerfile`, maps host port 5005 to container port 5005, depends on `mongo`, uses a custom network). Sets up the `mongo` service (uses `mongo:6.0` image, persists data via a volume, uses the custom network). Defines a local volume for MongoDB data persistence and a bridge network for inter-container communication. Includes basic production environment variable settings (which should be managed securely).
+    - **`Dockerfile`:** Defines the build process for the backend Docker image. Uses a multi-stage build, copies necessary files, exposes port 5005, sets `NODE_ENV=production`, includes a `HEALTHCHECK`, and runs as a non-root user (`node`). (Đã xác nhận cấu hình tốt).
+    - **`docker-compose.yml`:** Defines `tarot-backend` và `mongo` services. `tarot-backend` builds from `Dockerfile`, maps port 5005, depends on `mongo`. `mongo` service uses the `mongo` (latest) image to resolve compatibility issues, persists data via `mongo-data` volume. Healthcheck for `mongo` was removed to simplify startup; `depends_on` for `tarot-backend` reverted to simple dependency. Network `tarot-network` is defined. Environment variables should be managed via `env_file` or secrets in production.
 
 ## Data Flow
 - Incoming requests hit `src/app.js`.
@@ -81,6 +81,16 @@
     - Added validation (`spreadValidators.js`) for Spread CRUD operations.
     - Implemented seeding script (`scripts/seedSpreads.js`) and added `seed:spreads` command to `package.json` for initial Spread data.
     - Implemented and passed all tests for the Spread module (`src/tests/spread.test.js`).
+- **Deployment Preparation & Troubleshooting (Phase 7-9 - 2025-04-28 & 2025-05-07):**
+    - Reviewed and prepared Docker configuration for production deployment.
+    - Troubleshooted and resolved Docker Compose startup issues:
+        - Fixed MongoDB connection errors (`getaddrinfo ENOTFOUND mongo`, `ECONNREFUSED`) by adjusting `depends_on` and `healthcheck` (eventually removing mongo healthcheck).
+        - Resolved MongoDB version incompatibility (`featureCompatibilityVersion`) by updating the `mongo` image to latest in `docker-compose.yml`.
+        - Fixed `ReferenceError` in graceful shutdown logic in `src/server.js`.
+    - Confirmed successful local startup using `docker compose up`.
+    - Reverted Vercel-specific configurations (`vercel.json`, CI/CD workflow) to focus on Docker Compose deployment.
+    - Updated deployment guide (`userInstructions/deployment_guide.md`) with detailed steps for Docker Compose on a Linux server, emphasizing security best practices.
+    - Updated project documentation (`projectRoadmap.md`, `currentTask.md`) to reflect completion of deployment preparation.
 
 ## User Feedback Integration
 - Not applicable yet.

@@ -26,33 +26,32 @@ Hướng dẫn này mô tả các bước cơ bản để triển khai ứng d�
     *   (Tùy chọn) Checkout nhánh/tag cụ thể nếu cần: `git checkout <branch_or_tag_name>`
 
 3.  **Cấu hình Biến Môi Trường cho Production:**
-    *   **CỰC KỲ QUAN TRỌNG:** Không bao giờ commit hoặc sao chép tệp `.env` chứa các bí mật production (như `JWT_SECRET`, `MONGODB_URI` có thông tin đăng nhập, Stripe keys) vào hệ thống kiểm soát phiên bản (Git) hoặc lên máy chủ production dưới dạng file `.env` thông thường.
-    *   Sử dụng các phương thức quản lý bí mật an toàn được cung cấp bởi nền tảng triển khai của bạn (ví dụ: Docker Secrets, Kubernetes Secrets, biến môi trường của các dịch vụ cloud như AWS Elastic Beanstalk, Heroku Config Vars, Vercel Environment Variables, etc.).
-    *   Nếu bạn đang triển khai trên máy chủ riêng và sử dụng Docker Compose, cách an toàn hơn là định nghĩa các biến môi trường trực tiếp trong file `docker-compose.yml` (sử dụng `environment` hoặc `env_file` trỏ đến file bên ngoài Git) hoặc sử dụng Docker Secrets nếu phiên bản Docker Compose hỗ trợ. **Tuyệt đối không để file `.env` chứa bí mật production trong cùng thư mục với `docker-compose.yml` khi commit lên Git.**
-    *   Xác định và cấu hình các biến môi trường sau cho môi trường production:
-        *   `NODE_ENV`: Phải được đặt là `production`.
-        *   `PORT`: Cổng nội bộ mà ứng dụng Node.js lắng nghe bên trong container (mặc định 5005). Cổng này sẽ được ánh xạ ra ngoài bởi Docker hoặc Reverse Proxy.
-        *   `MONGODB_URI`: **(Bí mật nhạy cảm)** Chuỗi kết nối đầy đủ đến cơ sở dữ liệu MongoDB production của bạn. Nếu DB yêu cầu xác thực (rất khuyến nghị cho production), hãy bao gồm thông tin đăng nhập: `mongodb://<username>:<password>@your_mongo_host:27017/tarot_prod?authSource=admin`. **Không bao giờ hardcode thông tin đăng nhập trực tiếp trong file cấu hình.**
-        *   `JWT_SECRET`: **(Bí mật cực kỳ nhạy cảm)** Một chuỗi ngẫu nhiên, dài và mạnh dùng để ký JWT. Tạo một secret duy nhất cho production (tham khảo `userInstructions/generate_jwt_secret.txt` để tạo, nhưng **không sử dụng lại secret của dev**).
-        *   `CORS_ORIGIN`: **(Quan trọng cho bảo mật)** URL cụ thể của ứng dụng frontend production của bạn (ví dụ: `https://your-frontend-domain.com`). Nếu có nhiều domain, sử dụng dấu phẩy để phân tách (ví dụ: `https://domain1.com,https://domain2.com`). **Không bao giờ sử dụng `*` trong production.**
-        *   Các biến môi trường tùy chọn khác như `FRONTEND_URL`, `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX`, `PERFORMANCE_THRESHOLD_MS`, `API_PREFIX`, `FREE_READINGS_PER_DAY`.
-        *   Nếu kích hoạt lại thanh toán Stripe, bạn cần cấu hình `STRIPE_SECRET_KEY` và `STRIPE_WEBHOOK_SECRET` (cũng là các bí mật cực kỳ nhạy cảm).
-
-    *   **Ví dụ (Sử dụng biến môi trường trực tiếp trong `docker-compose.yml` - chỉ là ví dụ, phương thức an toàn hơn là dùng Docker Secrets):**
+    *   **CỰC KỲ QUAN TRỌNG:** Không bao giờ commit tệp `.env` chứa các bí mật production (như `JWT_SECRET`, `MONGODB_URI` có thông tin đăng nhập, Stripe keys) vào Git.
+    *   **Phương pháp khuyến nghị:** Tạo một tệp riêng biệt trên máy chủ production (ví dụ: `/etc/tarot-app/.env.prod` hoặc một vị trí an toàn khác **bên ngoài** thư mục dự án được clone từ Git). Đặt tất cả các biến môi trường production vào tệp này. Sau đó, tham chiếu đến tệp này trong `docker-compose.yml` bằng cách sử dụng `env_file`.
         ```yaml
+        # Ví dụ trong docker-compose.yml
         services:
           tarot-backend:
             # ... other configurations ...
-            environment:
-              - NODE_ENV=production
-              - PORT=5005
-              - MONGODB_URI=mongodb://mongo:27017/tarot_prod # Thay bằng chuỗi kết nối production
-              - JWT_SECRET=your_production_strong_jwt_secret # Thay bằng secret production
-              - CORS_ORIGIN=https://your-frontend-domain.com # Thay bằng URL frontend production
-              # Thêm các biến khác
+            env_file:
+              - /etc/tarot-app/.env.prod # Đường dẫn đến file env trên server
             # ...
         ```
-    *   **Lưu ý:** Nếu bạn sử dụng file `.env` trên server production (chỉ khi không có lựa chọn nào khác tốt hơn), hãy đảm bảo file này **không** được đưa vào Git và chỉ tồn tại trên server.
+        Đảm bảo tệp này có quyền đọc phù hợp cho người dùng chạy Docker.
+    *   **Các phương pháp khác:** Docker Secrets (an toàn nhất nhưng phức tạp hơn), biến môi trường hệ thống trên máy chủ. Tránh định nghĩa bí mật trực tiếp trong `environment` của `docker-compose.yml` nếu có thể.
+    *   **Các biến môi trường cần thiết cho Production:**
+        *   `NODE_ENV`: `production`
+        *   `PORT`: `5005` (Cổng nội bộ container, không cần thay đổi trừ khi có lý do đặc biệt)
+        *   `MONGODB_URI`: **(Bí mật nhạy cảm)** Chuỗi kết nối đầy đủ đến MongoDB production. **Rất khuyến nghị** sử dụng MongoDB Atlas hoặc một managed database khác thay vì chạy MongoDB trong container cùng ứng dụng cho production. Nếu dùng Atlas, chuỗi kết nối sẽ có dạng `mongodb+srv://<username>:<password>@yourcluster.mongodb.net/tarot_prod?retryWrites=true&w=majority`.
+        *   `JWT_SECRET`: **(Bí mật cực kỳ nhạy cảm)** Chuỗi ngẫu nhiên, dài, mạnh. Tạo secret mới cho production (xem `userInstructions/generate_jwt_secret.txt`).
+        *   `CORS_ORIGIN`: **(Quan trọng)** URL của frontend production (ví dụ: `https://your-frontend.com`). Không dùng `*`.
+        *   (Tùy chọn) `FRONTEND_URL`, `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX`, etc.
+        *   (Nếu dùng Stripe) `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` (Bí mật nhạy cảm).
+
+    *   **(Khuyến nghị) Bật Xác thực MongoDB:**
+        *   Nếu bạn tự host MongoDB (kể cả trong Docker), **hãy bật chế độ xác thực** cho production.
+        *   Trong `docker-compose.yml`, bỏ comment và đặt giá trị cho `MONGO_INITDB_ROOT_USERNAME` và `MONGO_INITDB_ROOT_PASSWORD` cho service `mongo`. **Quản lý các giá trị này như bí mật!**
+        *   Cập nhật `MONGODB_URI` trong file biến môi trường của backend để bao gồm username/password: `mongodb://<username>:<password>@mongo:27017/tarot_prod?authSource=admin`.
 
 4.  **Build và Khởi chạy Container:**
     *   Từ thư mục gốc của dự án, chạy lệnh sau:
@@ -68,7 +67,7 @@ Hướng dẫn này mô tả các bước cơ bản để triển khai ứng d�
         ```bash
         sudo docker compose ps
         ```
-    *   Bạn nên thấy `tarot_backend_app` và `tarot_mongo_db` đang ở trạng thái `Up` và `tarot_backend_app` có trạng thái `(healthy)` sau một khoảng thời gian (do cấu hình healthcheck).
+    *   Bạn nên thấy `tarot_backend_app` và `tarot_mongo_db` (nếu chạy cùng) đang ở trạng thái `Up`. `tarot_backend_app` sẽ có trạng thái `(health: starting)` ban đầu và chuyển sang `(healthy)` sau khi health check thành công. (Lưu ý: Chúng ta đã bỏ healthcheck cho `mongo` để khắc phục sự cố khởi động trước đó).
     *   Kiểm tra logs nếu có vấn đề:
         ```bash
         sudo docker compose logs tarot-backend
@@ -81,12 +80,15 @@ Hướng dẫn này mô tả các bước cơ bản để triển khai ứng d�
         ```nginx
         server {
             listen 80; # Nghe cổng 80 cho HTTP
-            # listen 443 ssl http2; # Bỏ comment nếu dùng HTTPS
-            server_name your_domain.com www.your_domain.com; # Thay bằng domain của bạn hoặc IP server
+            # RẤT KHUYẾN NGHỊ: Bật HTTPS cho production
+            listen 443 ssl http2; # Nghe cổng 443 cho HTTPS
+            listen [::]:443 ssl http2; # Cho IPv6
+            server_name your_domain.com www.your_domain.com; # Thay bằng domain của bạn
 
-            # Cấu hình SSL (nếu dùng HTTPS, ví dụ với Certbot)
-            # ssl_certificate /etc/letsencrypt/live/your_domain.com/fullchain.pem;
-            # ssl_certificate_key /etc/letsencrypt/live/your_domain.com/privkey.pem;
+            # Cấu hình SSL (Sử dụng Certbot để lấy chứng chỉ miễn phí)
+            # Xem hướng dẫn Certbot: https://certbot.eff.org/instructions
+            ssl_certificate /etc/letsencrypt/live/your_domain.com/fullchain.pem; # Đường dẫn Certbot cung cấp
+            ssl_certificate_key /etc/letsencrypt/live/your_domain.com/privkey.pem; # Đường dẫn Certbot cung cấp
             # include /etc/letsencrypt/options-ssl-nginx.conf;
             # ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
@@ -118,8 +120,8 @@ Hướng dẫn này mô tả các bước cơ bản để triển khai ứng d�
     *   Nếu bạn chưa cấu hình bước deploy tự động, bạn sẽ cần SSH vào máy chủ và chạy lệnh pull/restart thủ công sau khi CI/CD hoàn thành:
         ```bash
         cd /path/to/your/app # Thay bằng đường dẫn trên server
-        sudo docker compose pull tarot-backend # Pull image mới nhất từ registry
-        sudo docker compose up -d --force-recreate # Khởi động lại container với image mới
+        sudo docker compose pull tarot-backend # Pull image mới nhất từ registry (Đảm bảo tên service là 'tarot-backend')
+        sudo docker compose up -d --force-recreate tarot-backend # Khởi động lại chỉ service backend
         sudo docker image prune -f # Dọn dẹp image cũ không dùng nữa
         ```
 
@@ -144,5 +146,5 @@ Hướng dẫn này mô tả các bước cơ bản để triển khai ứng d�
 
 *   Đây là hướng dẫn cơ bản. Môi trường production thực tế có thể yêu cầu các cấu hình phức tạp hơn về bảo mật, logging, monitoring, và backup.
 *   Luôn đảm bảo an toàn cho các khóa bí mật (JWT_SECRET, Stripe keys, v.v.).
-*   Xem xét việc sử dụng managed database thay vì chạy MongoDB trong container cho production.
-*   Việc cấu hình deploy tự động trong CI/CD cần được thực hiện cẩn thận và kiểm tra kỹ lưỡng.
+*   **Rất khuyến nghị** sử dụng managed database (như MongoDB Atlas) thay vì chạy MongoDB trong container cho production để đảm bảo tính sẵn sàng, backup và bảo mật tốt hơn.
+*   Việc cấu hình deploy tự động trong CI/CD cần được thực hiện cẩn thận và kiểm tra kỹ lưỡng trên môi trường staging trước khi áp dụng cho production.
