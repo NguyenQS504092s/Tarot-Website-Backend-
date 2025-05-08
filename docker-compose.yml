@@ -18,8 +18,9 @@ services:
     ports:
       # Map host port 5005 to container port 5005 (where the app listens)
       - "5005:5005"
-    depends_on: # Reverted to simple depends_on, removed condition
-      - mongo
+    depends_on:
+      mongo:
+        condition: service_healthy # Wait for mongo to be healthy again
     networks:
       - tarot-network
     # REMOVED volumes mount for production - code should be in the image
@@ -53,7 +54,13 @@ services:
       - mongo-data:/data/db # Persist data
     networks:
       - tarot-network
-    # REMOVED healthcheck for mongo temporarily to simplify startup
+    healthcheck:
+      # Use mongosh to ping the server. Exits with 0 if OK, non-zero otherwise.
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 45s # Increased start period
 
 volumes:
   mongo-data:
