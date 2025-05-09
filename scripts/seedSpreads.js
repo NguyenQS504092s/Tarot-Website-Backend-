@@ -2,12 +2,12 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const path = require('path');
-const Spread = require('../src/models/spreadModel'); // Adjust path as needed
-const { connectDB, closeDB } = require('../src/config/database'); // Adjust path as needed
-const logger = require('../src/utils/logger'); // Adjust path as needed
-const config = require('../src/config/config'); // Import config
+const Spread = require('../src/models/spreadModel'); // Path reverted
+const { connectDB, closeDB } = require('../src/config/database'); // Path reverted
+const logger = require('../src/utils/logger'); // Path reverted
+const config = require('../src/config/config'); // Path reverted
 
-// dotenv.config() is handled by dotenv-cli in package.json script now
+dotenv.config({ path: path.resolve(__dirname, '../.env') }); // Path reverted
 
 const spreadsToSeed = [
   {

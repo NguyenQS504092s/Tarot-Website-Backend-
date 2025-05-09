@@ -11,8 +11,8 @@ services:
       - MONGODB_URI=mongodb://mongo:27017/tarot_prod
       # PORT is exposed by Dockerfile, no need to set here unless overriding
       # - PORT=5005
-      # IMPORTANT: Replace with your actual frontend production URL(s)
-      - CORS_ORIGIN=https://your-frontend-domain.com
+      # Allow localhost:3000 for development
+      - CORS_ORIGIN=http://localhost:3000
       # Add other necessary production environment variables here (e.g., JWT_SECRET)
       - JWT_SECRET=4bfc8aa0acb8d2c800990e1f635be7165981c85dc455caeafcda7755036d5e32c8a41f4361fadc10aaae8ce4dc3c7590bb81aa21c516b1a1a9b63b9ed6add5e1
     ports:

@@ -1,0 +1,7 @@
+# Dockerfile.debug - Minimal test for COPY src
+FROM node:18-bullseye-slim
+WORKDIR /app
+COPY src ./src
+# If the above COPY fails, try absolute path:
+# COPY src /app/src
+CMD ["ls", "-la", "./src"]
